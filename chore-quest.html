@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chore Quest</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0e17; --surface: #1a1928; --surface2: #252438;
+    --accent: #f4c842; --accent2: #ff6b6b; --accent3: #6bffb8; --accent4: #6ba3ff;
+    --text: #fffffe; --text-muted: #a7a5c0;
+    --easy: #6bffb8; --medium: #f4c842; --hard: #ff6b6b;
+    --radius: 16px; --radius-sm: 8px;
+    --c0: #f4c842; --c1: #ff6b6b; --c2: #6ba3ff; --c3: #c56bff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Nunito', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; opacity: 0.5; }
+  .app { position: relative; z-index: 1; }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; border-bottom: 2px solid var(--surface2); }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: 2.4rem; letter-spacing: 3px; color: var(--accent); text-shadow: 0 0 30px rgba(244,200,66,0.4); }
+  .logo span { color: var(--text-muted); font-size: 1rem; font-family: 'Nunito', sans-serif; display: block; letter-spacing: 1px; margin-top: -6px; }
+  .header-actions { display: flex; gap: 12px; }
+  .btn-icon { background: var(--surface2); border: 2px solid transparent; border-radius: var(--radius-sm); color: var(--text-muted); cursor: pointer; font-size: 1.2rem; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.05); }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* HOME */
+  #home { padding: 32px 28px; }
+  .section-label { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 3px; color: var(--text-muted); margin-bottom: 16px; }
+  .kids-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; margin-bottom: 36px; }
+  @media(min-width:600px){ .kids-grid { grid-template-columns: repeat(4,1fr); } }
+  .kid-toggle { background: var(--surface); border: 3px solid var(--surface2); border-radius: var(--radius); padding: 20px 12px; text-align: center; cursor: pointer; transition: all 0.25s; user-select: none; position: relative; overflow: hidden; }
+  .kid-toggle.active { border-color: var(--accent); background: rgba(244,200,66,0.08); box-shadow: 0 0 20px rgba(244,200,66,0.15); }
+  .kid-toggle .kid-avatar { font-size: 2.8rem; display: block; margin-bottom: 8px; transition: transform 0.2s; }
+  .kid-toggle:hover .kid-avatar { transform: scale(1.1); }
+  .kid-toggle .kid-name { font-size: 1.1rem; font-weight: 800; display: block; }
+  .kid-toggle .kid-status { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-top: 4px; display: block; }
+  .kid-toggle.active .kid-status { color: var(--accent); }
+  .kid-toggle .fewer-badge { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(107,255,184,0.18); color: var(--accent3); font-size: 0.58rem; font-weight: 900; letter-spacing: 0.5px; padding: 3px; text-align: center; display: none; }
+  .kid-toggle.fewer-last .fewer-badge { display: block; }
+  .kid-toggle .inactive-x { position: absolute; top: 0; right: 0; background: var(--accent2); color: white; font-size: 0.65rem; font-weight: 900; padding: 2px 6px; border-bottom-left-radius: 8px; display: none; }
+  .kid-toggle:not(.active) .inactive-x { display: block; }
+  .kid-toggle:not(.active) .kid-name { opacity: 0.4; }
+
+  .points-preview { background: var(--surface); border: 2px solid var(--surface2); border-radius: var(--radius); padding: 16px 24px; margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .points-preview .stat { text-align: center; }
+  .points-preview .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--accent); line-height: 1; }
+  .points-preview .stat-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+  .roll-section { text-align: center; }
+  .btn-roll { background: var(--accent); color: var(--bg); border: none; border-radius: var(--radius); font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 4px; padding: 20px 60px; cursor: pointer; transition: all 0.2s; box-shadow: 0 6px 0 #b8921a, 0 0 40px rgba(244,200,66,0.3); position: relative; top: 0; }
+  .btn-roll:hover { top: -3px; box-shadow: 0 9px 0 #b8921a, 0 0 60px rgba(244,200,66,0.4); }
+  .btn-roll:active { top: 4px; box-shadow: 0 2px 0 #b8921a; }
+  .btn-roll:disabled { opacity: 0.4; cursor: not-allowed; top: 0; }
+
+  /* ASSIGN */
+  #spin { padding: 24px 28px; }
+  .assign-header { text-align: center; margin-bottom: 20px; }
+  .assign-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.6rem; letter-spacing: 4px; color: var(--accent); text-shadow: 0 0 40px rgba(244,200,66,0.5); }
+  .assign-sub { color: var(--text-muted); font-weight: 700; font-size: 0.95rem; margin-top: 4px; min-height: 1.4em; }
+
+  .task-pool { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 24px; max-width: 900px; margin-left: auto; margin-right: auto; }
+
+  .pool-chip { border: 2px solid var(--surface2); border-radius: 100px; padding: 5px 12px; font-size: 0.76rem; font-weight: 800; background: var(--surface); color: var(--text-muted); transition: all 0.18s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .pool-chip .chip-room { font-size: 0.55rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.5; }
+  .pool-chip .chip-pts { font-family: 'Bebas Neue', sans-serif; font-size: 0.8rem; opacity: 0.55; }
+  .pool-chip.scanning { border-color: var(--accent); background: rgba(244,200,66,0.14); color: var(--text); transform: scale(1.08); box-shadow: 0 0 16px rgba(244,200,66,0.45); }
+  .pool-chip.scanning .chip-pts { opacity: 1; }
+  .pool-chip.assigned-0 { border-color: var(--c0); background: rgba(244,200,66,0.1); color: var(--text); }
+  .pool-chip.assigned-1 { border-color: var(--c1); background: rgba(255,107,107,0.1); color: var(--text); }
+  .pool-chip.assigned-2 { border-color: var(--c2); background: rgba(107,163,255,0.1); color: var(--text); }
+  .pool-chip.assigned-3 { border-color: var(--c3); background: rgba(197,107,255,0.1); color: var(--text); }
+  .pool-chip.star-chip { border-color: rgba(244,200,66,0.35); background: rgba(244,200,66,0.07); color: var(--accent); }
+
+  .assign-kids-row { display: grid; gap: 14px; margin-bottom: 24px; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); }
+  .assign-kid-panel { background: var(--surface); border: 2px solid var(--surface2); border-radius: var(--radius); padding: 14px; transition: border-color 0.25s, box-shadow 0.25s; }
+  .assign-kid-panel.lit { box-shadow: 0 0 18px rgba(0,0,0,0.4); }
+  .akp-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .akp-avatar { font-size: 1.6rem; }
+  .akp-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 2px; }
+  .akp-pts { margin-left: auto; font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; line-height: 1; }
+  .akp-tasks { display: flex; flex-direction: column; gap: 4px; min-height: 20px; }
+  .akp-task-row { font-size: 0.76rem; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 5px; opacity: 0; transform: translateX(-6px); transition: opacity 0.25s, transform 0.25s; }
+  .akp-task-row.shown { opacity: 1; transform: translateX(0); }
+  .akp-task-row .room-tag { font-size: 0.54rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; opacity: 0.45; }
+
+  .btn-go { display: none; background: var(--accent3); color: var(--bg); border: none; border-radius: var(--radius); font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 3px; padding: 18px 50px; cursor: pointer; margin: 0 auto; transition: all 0.2s; box-shadow: 0 5px 0 #3db87a; position: relative; top: 0; }
+  .btn-go:hover { top: -2px; box-shadow: 0 7px 0 #3db87a; }
+  .btn-go:active { top: 3px; box-shadow: 0 2px 0 #3db87a; }
+
+  /* QUEST */
+  #quest { padding: 24px 28px; }
+  .quest-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .quest-title { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 3px; color: var(--accent); }
+  .quest-date { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); }
+  .quest-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 18px; }
+  .kid-card { background: var(--surface); border: 2px solid var(--surface2); border-radius: var(--radius); overflow: hidden; transition: border-color 0.3s; }
+  .kid-card.done { border-color: var(--accent3); }
+  .kid-card-header { padding: 16px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 2px solid var(--surface2); background: rgba(255,255,255,0.02); }
+  .kid-card-avatar { font-size: 2rem; }
+  .kid-card-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 2px; }
+  .kid-card-pts { margin-left: auto; text-align: right; }
+  .pts-current { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: var(--accent); line-height: 1; }
+  .pts-target { font-size: 0.7rem; font-weight: 700; color: var(--text-muted); }
+  .progress-bar { height: 6px; background: var(--surface2); }
+  .progress-fill { height: 100%; background: var(--accent); transition: width 0.4s cubic-bezier(0.34,1.56,0.64,1); border-radius: 0 3px 3px 0; }
+  .kid-card-section-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.72rem; letter-spacing: 2px; color: var(--text-muted); padding: 10px 20px 2px; opacity: 0.55; }
+  .kid-tasks { padding: 0 20px 8px; }
+  .task-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: opacity 0.2s; }
+  .task-item:last-child { border-bottom: none; }
+  .task-item:hover { opacity: 0.85; }
+  .task-checkbox { width: 22px; height: 22px; border: 2px solid var(--surface2); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 0.8rem; }
+  .task-item.checked .task-checkbox { background: var(--accent3); border-color: var(--accent3); }
+  .task-name { font-size: 0.88rem; font-weight: 700; flex: 1; }
+  .task-item.checked .task-name { text-decoration: line-through; opacity: 0.45; }
+  .diff-badge { font-size: 0.62rem; font-weight: 900; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; flex-shrink: 0; }
+  .diff-badge.easy { background: rgba(107,255,184,0.2); color: var(--easy); }
+  .diff-badge.medium { background: rgba(244,200,66,0.2); color: var(--medium); }
+  .diff-badge.hard { background: rgba(255,107,107,0.2); color: var(--hard); }
+  .diff-badge.star { background: rgba(255,255,255,0.1); color: #ccc; }
+  .done-banner { display: none; background: var(--accent3); color: var(--bg); text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 3px; padding: 10px; }
+  .kid-card.done .done-banner { display: block; }
+
+  .kid-card.kid-0 .kid-card-name,.kid-card.kid-0 .pts-current{color:var(--c0);}
+  .kid-card.kid-0 .progress-fill{background:var(--c0);}
+  .kid-card.kid-0.done .done-banner{background:var(--c0);}
+  .kid-card.kid-1 .kid-card-name,.kid-card.kid-1 .pts-current{color:var(--c1);}
+  .kid-card.kid-1 .progress-fill{background:var(--c1);}
+  .kid-card.kid-1.done .done-banner{background:var(--c1);}
+  .kid-card.kid-2 .kid-card-name,.kid-card.kid-2 .pts-current{color:var(--c2);}
+  .kid-card.kid-2 .progress-fill{background:var(--c2);}
+  .kid-card.kid-2.done .done-banner{background:var(--c2);}
+  .kid-card.kid-3 .kid-card-name,.kid-card.kid-3 .pts-current{color:var(--c3);}
+  .kid-card.kid-3 .progress-fill{background:var(--c3);}
+  .kid-card.kid-3.done .done-banner{background:var(--c3);}
+
+  /* SETTINGS */
+  #settings-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; overflow-y: auto; backdrop-filter: blur(4px); }
+  #settings-overlay.open { display: flex; align-items: flex-start; justify-content: center; padding: 40px 20px; }
+  .settings-panel { background: var(--surface); border: 2px solid var(--surface2); border-radius: var(--radius); width: 100%; max-width: 640px; overflow: hidden; }
+  .settings-header { background: var(--surface2); padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .settings-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 3px; color: var(--accent); }
+  .settings-body { padding: 24px; }
+  .settings-section { margin-bottom: 28px; }
+  .settings-section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 14px; border-bottom: 1px solid var(--surface2); padding-bottom: 8px; }
+  .room-block { margin-bottom: 18px; }
+  .room-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .room-name-display { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 2px; flex: 1; }
+  .task-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 5px; }
+  .task-row .task-row-name { flex: 1; font-size: 0.88rem; font-weight: 700; }
+  .btn-sm { background: transparent; border: 1px solid var(--surface2); border-radius: 6px; color: var(--text-muted); cursor: pointer; font-size: 0.7rem; font-weight: 800; padding: 4px 8px; transition: all 0.15s; }
+  .btn-sm:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-sm.primary { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.primary:hover { background: var(--accent); color: var(--bg); }
+  .select-pts { background: var(--surface2); border: 1px solid transparent; border-radius: 6px; color: var(--text); font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 0.8rem; padding: 4px 6px; cursor: pointer; outline: none; }
+  .star-toggle { cursor: pointer; font-size: 1rem; opacity: 0.4; transition: opacity 0.2s; }
+  .star-toggle.on { opacity: 1; }
+  .add-row { display: flex; gap: 8px; margin-top: 10px; }
+  .input-sm { background: var(--bg); border: 1px solid var(--surface2); border-radius: var(--radius-sm); color: var(--text); font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.88rem; padding: 7px 12px; flex: 1; outline: none; transition: border-color 0.2s; }
+  .input-sm:focus { border-color: var(--accent); }
+  .fairness-row { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 5px; font-size: 0.82rem; font-weight: 700; }
+  .fairness-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--accent3); color: var(--bg); font-weight: 800; font-size: 0.9rem; padding: 12px 24px; border-radius: 100px; z-index: 200; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); pointer-events: none; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .all-done-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50; align-items: center; justify-content: center; backdrop-filter: blur(4px); flex-direction: column; text-align: center; padding: 20px; }
+  .all-done-overlay.show { display: flex; }
+  .all-done-text { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; letter-spacing: 6px; color: var(--accent3); text-shadow: 0 0 60px rgba(107,255,184,0.5); animation: pulse 1.5s infinite; }
+  .all-done-sub { font-size: 1.2rem; font-weight: 700; color: var(--text-muted); margin-top: 12px; }
+  .btn-new-day { margin-top: 28px; background: var(--accent); color: var(--bg); border: none; border-radius: var(--radius); font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 3px; padding: 16px 44px; cursor: pointer; }
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.85;transform:scale(1.03);}}
+  .confetti-piece { position: fixed; border-radius: 2px; animation: confettifall 3s ease-in forwards; z-index: 300; pointer-events: none; }
+  @keyframes confettifall{0%{transform:translateY(-60px) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="logo">Chore Quest<span>Daily Mission Control</span></div>
+    <div class="header-actions">
+      <button class="btn-icon" id="homeBtn">🏠</button>
+      <button class="btn-icon" id="settingsBtn">⚙️</button>
+    </div>
+  </header>
+
+  <div class="screen active" id="home">
+    <div style="padding:32px 28px">
+      <p class="section-label">Today's Heroes</p>
+      <div class="kids-grid" id="kidsGrid"></div>
+      <div class="points-preview">
+        <div class="stat"><div class="stat-val" id="totalPts">0</div><div class="stat-label">Total Points</div></div>
+        <div class="stat"><div class="stat-val" id="activeKids">0</div><div class="stat-label">Active Kids</div></div>
+        <div class="stat"><div class="stat-val" id="targetPts">0</div><div class="stat-label">Target Each</div></div>
+      </div>
+      <div class="roll-section">
+        <button class="btn-roll" id="rollBtn">⚡ ASSIGN QUESTS ⚡</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="spin">
+    <div style="padding:24px 28px">
+      <div class="assign-header">
+        <div class="assign-title">⚡ QUEST ASSIGNMENT ⚡</div>
+        <div class="assign-sub" id="assignSub">Scanning the task pool...</div>
+      </div>
+      <div class="task-pool" id="taskPool"></div>
+      <div class="assign-kids-row" id="assignKidsRow"></div>
+      <div style="text-align:center">
+        <button class="btn-go" id="goBtn">🏆 START YOUR QUEST 🏆</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" id="quest">
+    <div style="padding:24px 28px">
+      <div class="quest-header">
+        <div><div class="quest-title">⚡ Active Quests</div><div class="quest-date" id="questDate"></div></div>
+        <button class="btn-sm primary" id="redrawBtn">↺ Reassign</button>
+      </div>
+      <div class="quest-grid" id="questGrid"></div>
+    </div>
+  </div>
+</div>
+
+<div id="settings-overlay">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <div class="settings-title">⚙️ Settings</div>
+      <button class="btn-icon" id="closeSettings">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="settings-section">
+        <div class="settings-section-title">Kids</div>
+        <div id="kidsSettings"></div>
+        <div class="add-row">
+          <input class="input-sm" id="newKidName" placeholder="Add kid name...">
+          <button class="btn-sm primary" id="addKidBtn">+ Add</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">Fairness History <span style="font-size:0.7rem;color:var(--text-muted)">(who got fewer pts, most recent last)</span></div>
+        <div id="fairnessHistory"></div>
+        <div style="margin-top:8px"><button class="btn-sm" id="resetFairnessBtn">↺ Reset History</button></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">Rooms & Tasks <span style="font-size:0.7rem;color:var(--text-muted)">⭐ = everyone does it</span></div>
+        <div id="roomsSettings"></div>
+        <div class="add-row">
+          <input class="input-sm" id="newRoomName" placeholder="Add room name...">
+          <button class="btn-sm primary" id="addRoomBtn">+ Room</button>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <button class="btn-sm primary" id="saveSettings" style="font-size:0.9rem;padding:10px 20px">💾 Save & Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="all-done-overlay" id="allDoneOverlay">
+  <div class="all-done-text">🎉 ALL DONE! 🎉</div>
+  <div class="all-done-sub">Every hero completed their quests today!</div>
+  <button class="btn-new-day" id="newDayBtn">🌅 New Day</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_DATA = {
+  kids:[
+    {name:'Bianca',avatar:'👧',active:true},
+    {name:'Samuel',avatar:'👦',active:true},
+    {name:'Lucca', avatar:'🧒',active:true},
+    {name:'Pedro', avatar:'🧑',active:true},
+  ],
+  rooms:[
+    {name:'Bedroom',tasks:[
+      {name:'Make the bed',     pts:1,everyone:true},
+      {name:'Put clothes away', pts:1,everyone:true},
+      {name:'Clean the floor',  pts:1,everyone:false},
+    ]},
+    {name:'Bathroom',tasks:[
+      {name:'Clean the toilet',        pts:2,everyone:false},
+      {name:'Clean the floor',         pts:2,everyone:false},
+      {name:'Clean the sink & mirror', pts:2,everyone:false},
+      {name:'Take out the trash',      pts:1,everyone:false},
+    ]},
+    {name:'Kitchen',tasks:[
+      {name:'Do the dishes',               pts:3,everyone:false},
+      {name:'Dry and put away dishes',     pts:2,everyone:false},
+      {name:'Clean the floor',             pts:2,everyone:false},
+      {name:'Clean the table',             pts:1,everyone:false},
+      {name:'Clean the stovetop',          pts:2,everyone:false},
+      {name:'Load the dishwasher',         pts:1,everyone:false},
+      {name:'Unload the dishwasher',       pts:2,everyone:false},
+      {name:'Take out organic trash',      pts:1,everyone:false},
+      {name:'Take out recycling',          pts:1,everyone:false},
+      {name:'Have proper lunch (no snacks)',pts:1,everyone:true},
+      {name:'Eat 2 fruits',               pts:1,everyone:true},
+    ]},
+    {name:'Garage',tasks:[
+      {name:'Collect clothes',          pts:1,everyone:false},
+      {name:'Load the washing machine', pts:1,everyone:false},
+      {name:'Unload washing machine',   pts:2,everyone:false},
+    ]},
+  ]
+};
+
+const KID_COLORS=['#f4c842','#ff6b6b','#6ba3ff','#c56bff'];
+
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[]};
+
+function loadState(){
+  try{
+    const s=localStorage.getItem('chorequest_v3');
+    if(s){
+      const p=JSON.parse(s);
+      state.kids=p.kids||DEFAULT_DATA.kids.map(k=>({...k}));
+      state.rooms=p.rooms||DEFAULT_DATA.rooms.map(r=>({...r,tasks:r.tasks.map(t=>({...t}))}));
+      state.fewerHistory=p.fewerHistory||[];
+      const today=new Date().toDateString();
+      if(p.today===today&&p.assignments){state.assignments=p.assignments;state.today=today;}
+      return;
+    }
+  }catch(e){}
+  state.kids=DEFAULT_DATA.kids.map(k=>({...k}));
+  state.rooms=DEFAULT_DATA.rooms.map(r=>({...r,tasks:r.tasks.map(t=>({...t}))}));
+  state.fewerHistory=[];
+}
+
+function saveState(){
+  localStorage.setItem('chorequest_v3',JSON.stringify({
+    kids:state.kids,rooms:state.rooms,assignments:state.assignments,
+    today:state.today,fewerHistory:state.fewerHistory
+  }));
+}
+
+/* AUDIO */
+const AC=new(window.AudioContext||window.webkitAudioContext)();
+function resumeAC(){if(AC.state==='suspended')AC.resume();}
+function tone(freq,type,dur,vol=0.3,delay=0){
+  resumeAC();
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  o.type=type;o.frequency.value=freq;
+  g.gain.setValueAtTime(vol,AC.currentTime+delay);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+delay+dur);
+  o.start(AC.currentTime+delay);o.stop(AC.currentTime+delay+dur);
+}
+function playClick(){tone(600,'square',0.05,0.15);}
+function playScan(){
+  resumeAC();
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  o.type='square';
+  o.frequency.setValueAtTime(180,AC.currentTime);
+  o.frequency.exponentialRampToValueAtTime(900,AC.currentTime+0.09);
+  g.gain.setValueAtTime(0.09,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+0.12);
+  o.start(AC.currentTime);o.stop(AC.currentTime+0.13);
+}
+function playLand(){[400,520,660].forEach((f,i)=>tone(f,'sine',0.14,0.28,i*0.06));}
+function playCheck(){tone(523,'sine',0.1,0.25);tone(784,'sine',0.15,0.3,0.08);}
+function playUncheck(){tone(400,'sine',0.12,0.2);}
+function playComplete(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,'sine',0.3,0.35,i*0.1));}
+function playAllDone(){[523,659,784,1047,1319,1047,784,1047].forEach((f,i)=>tone(f,'sine',0.35,0.4,i*0.13));}
+
+/* CALC */
+function getActiveKids(){return state.kids.filter(k=>k.active);}
+function calcPoints(){
+  const n=getActiveKids().length;
+  if(!n)return{total:0,target:0};
+  let starPts=0,poolPts=0;
+  for(const r of state.rooms)for(const t of r.tasks)t.everyone?starPts+=t.pts:poolPts+=t.pts;
+  return{total:starPts*n+poolPts,target:Math.round(starPts+poolPts/n)};
+}
+
+/* FAIRNESS */
+function getFairnessTarget(activeKids){
+  const names=activeKids.map(k=>k.name);
+  const notYet=names.filter(n=>!state.fewerHistory.includes(n));
+  if(notYet.length===0){
+    const last=state.fewerHistory[state.fewerHistory.length-1];
+    state.fewerHistory=last?[last]:[];
+    const nn=names.filter(n=>!state.fewerHistory.includes(n));
+    return activeKids.findIndex(k=>k.name===nn[0]);
+  }
+  return activeKids.findIndex(k=>k.name===notYet[0]);
+}
+
+/* DISTRIBUTION */
+function distributeTasks(){
+  const activeKids=getActiveKids();
+  const n=activeKids.length;
+  const {target}=calcPoints();
+  const starTasks=[],poolTasks=[];
+  for(const room of state.rooms){
+    for(const task of room.tasks){
+      const t={name:task.name,pts:task.pts,everyone:task.everyone,done:false,room:room.name};
+      task.everyone?starTasks.push(t):poolTasks.push(t);
+    }
+  }
+  for(let i=poolTasks.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[poolTasks[i],poolTasks[j]]=[poolTasks[j],poolTasks[i]];}
+  const kidIdx=activeKids.map((_,i)=>state.kids.indexOf(activeKids[i]));
+  const assignments={};
+  kidIdx.forEach(i=>{assignments[i]=starTasks.map(t=>({...t}));});
+  const kidPts={};
+  kidIdx.forEach(i=>{kidPts[i]=assignments[i].reduce((s,t)=>s+t.pts,0);});
+  const fairnessLocal=getFairnessTarget(activeKids);
+  const fairnessGlobal=kidIdx[fairnessLocal];
+  const sorted=[...poolTasks].sort((a,b)=>b.pts-a.pts);
+  for(const task of sorted){
+    const under=kidIdx.filter(i=>kidPts[i]<target);
+    const underNF=under.filter(i=>i!==fairnessGlobal);
+    const pool=underNF.length>0?underNF:under.length>0?under:kidIdx;
+    const pick=pool.reduce((best,i)=>kidPts[i]<kidPts[best]?i:best,pool[0]);
+    assignments[pick].push({...task});
+    kidPts[pick]+=task.pts;
+  }
+  const minPts=Math.min(...kidIdx.map(i=>kidPts[i]));
+  const fewerGI=kidIdx.find(i=>kidPts[i]===minPts);
+  const fewerKid=fewerGI!==undefined?activeKids[kidIdx.indexOf(fewerGI)]:null;
+  if(fewerKid){
+    state.fewerHistory=state.fewerHistory.filter(n=>n!==fewerKid.name);
+    state.fewerHistory.push(fewerKid.name);
+  }
+  return{assignments,kidPts};
+}
+
+/* HOME */
+function renderHome(){
+  const grid=document.getElementById('kidsGrid');
+  grid.innerHTML='';
+  const last=state.fewerHistory[state.fewerHistory.length-1];
+  state.kids.forEach((kid,i)=>{
+    const div=document.createElement('div');
+    div.className='kid-toggle'+(kid.active?' active':'')+(kid.name===last?' fewer-last':'');
+    div.innerHTML=`<div class="inactive-x">OUT</div><span class="kid-avatar">${kid.avatar}</span><span class="kid-name">${kid.name}</span><span class="kid-status">${kid.active?'On Quest':'Unavailable'}</span><div class="fewer-badge">⬇ FEWER LAST TIME</div>`;
+    div.addEventListener('click',()=>{playClick();kid.active=!kid.active;saveState();renderHome();});
+    grid.appendChild(div);
+  });
+  const{total,target}=calcPoints();
+  const n=getActiveKids().length;
+  document.getElementById('totalPts').textContent=total;
+  document.getElementById('activeKids').textContent=n;
+  document.getElementById('targetPts').textContent=target;
+  document.getElementById('rollBtn').disabled=n===0;
+}
+
+/* ASSIGN ANIMATION */
+function doAssign(){
+  showScreen('spin');
+  resumeAC();
+  const activeKids=getActiveKids();
+  const{assignments,kidPts}=distributeTasks();
+  state.assignments=assignments;
+  state.today=new Date().toDateString();
+  saveState();
+
+  const pool=document.getElementById('taskPool');
+  pool.innerHTML='';
+
+  // Star chips
+  for(const room of state.rooms)
+    for(const task of room.tasks)
+      if(task.everyone){
+        const c=document.createElement('div');
+        c.className='pool-chip star-chip';
+        c.innerHTML=`<span>⭐</span><span>${task.name}</span><span class="chip-room">${task.room}</span><span class="chip-pts">${task.pts}pt</span>`;
+        pool.appendChild(c);
+      }
+
+  // Non-star chips — collect all with metadata
+  const chipEntries=[];
+  activeKids.forEach((kid,localIdx)=>{
+    const gi=state.kids.indexOf(kid);
+    (assignments[gi]||[]).filter(t=>!t.everyone).forEach(task=>{
+      const c=document.createElement('div');
+      c.className='pool-chip';
+      c.innerHTML=`<span>${task.name}</span><span class="chip-room">${task.room}</span><span class="chip-pts">${task.pts}pt</span>`;
+      pool.appendChild(c);
+      chipEntries.push({chip:c,globalKidIdx:gi,localKidIdx:localIdx,task});
+    });
+  });
+
+  // Shuffle DOM order of non-star chips
+  const nonStarChips=chipEntries.map(e=>e.chip);
+  shuffle(nonStarChips);
+  nonStarChips.forEach(c=>pool.appendChild(c));
+
+  // Kid panels
+  const kidsRow=document.getElementById('assignKidsRow');
+  kidsRow.innerHTML='';
+  const panelMap={};
+  activeKids.forEach((kid,localIdx)=>{
+    const gi=state.kids.indexOf(kid);
+    const panel=document.createElement('div');
+    panel.className='assign-kid-panel';
+    panel.innerHTML=`
+      <div class="akp-header">
+        <span class="akp-avatar">${kid.avatar}</span>
+        <span class="akp-name" style="color:${KID_COLORS[localIdx]}">${kid.name}</span>
+        <span class="akp-pts" style="color:${KID_COLORS[localIdx]}" id="akpp-${gi}">0</span>
+      </div>
+      <div class="akp-tasks" id="akpt-${gi}"></div>
+    `;
+    kidsRow.appendChild(panel);
+    panelMap[gi]=panel;
+  });
+
+  document.getElementById('goBtn').style.display='none';
+  document.getElementById('assignSub').textContent='Analysing the quest pool...';
+
+  // Show star pts immediately
+  const kidRunPts={};
+  activeKids.forEach(k=>{
+    const gi=state.kids.indexOf(k);
+    kidRunPts[gi]=(assignments[gi]||[]).filter(t=>t.everyone).reduce((s,t)=>s+t.pts,0);
+    setTimeout(()=>{const el=document.getElementById(`akpp-${gi}`);if(el)el.textContent=kidRunPts[gi];},200);
+  });
+
+  // Shuffle animation order
+  const toAnimate=[...chipEntries];
+  shuffle(toAnimate);
+
+  const totalBudget=9000;
+  const perChip=Math.min(340,totalBudget/Math.max(toAnimate.length,1));
+  const scanDur=Math.min(160,perChip*0.5);
+
+  let t=350;
+  toAnimate.forEach(({chip,globalKidIdx,localKidIdx,task},idx)=>{
+    setTimeout(()=>{
+      playScan();
+      document.querySelectorAll('.pool-chip.scanning').forEach(c=>c.classList.remove('scanning'));
+      chip.classList.add('scanning');
+      document.getElementById('assignSub').textContent=`Evaluating: ${task.name} [${task.room}]...`;
+    },t);
+    t+=scanDur;
+    setTimeout(()=>{
+      chip.classList.remove('scanning');
+      chip.classList.add(`assigned-${localKidIdx}`);
+      playLand();
+      const row=document.createElement('div');
+      row.className='akp-task-row';
+      const dl=task.pts===1?'easy':task.pts===2?'medium':'hard';
+      row.innerHTML=`<span class="diff-badge ${dl}">${task.pts}pt</span><span>${task.name}</span><span class="room-tag">${task.room}</span>`;
+      document.getElementById(`akpt-${globalKidIdx}`).appendChild(row);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>row.classList.add('shown')));
+      kidRunPts[globalKidIdx]+=task.pts;
+      const el=document.getElementById(`akpp-${globalKidIdx}`);
+      if(el)el.textContent=kidRunPts[globalKidIdx];
+      const panel=panelMap[globalKidIdx];
+      panel.style.borderColor=KID_COLORS[localKidIdx];
+      setTimeout(()=>{panel.style.borderColor='';},350);
+      if(idx===toAnimate.length-1)document.getElementById('assignSub').textContent='All quests assigned!';
+    },t);
+    t+=perChip-scanDur;
+  });
+
+  setTimeout(()=>{playComplete();document.getElementById('goBtn').style.display='inline-block';},t+300);
+}
+
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
+
+/* QUEST */
+function renderQuest(){
+  showScreen('quest');
+  document.getElementById('questDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const grid=document.getElementById('questGrid');
+  grid.innerHTML='';
+  getActiveKids().forEach((kid,localIdx)=>{
+    const gi=state.kids.indexOf(kid);
+    const tasks=state.assignments[gi]||[];
+    const done=tasks.filter(t=>t.done).reduce((s,t)=>s+t.pts,0);
+    const total=tasks.reduce((s,t)=>s+t.pts,0);
+    const isDone=done>=total;
+    const card=document.createElement('div');
+    card.className=`kid-card kid-${localIdx}${isDone?' done':''}`;
+    card.id=`kid-card-${gi}`;
+    card.innerHTML=`
+      <div class="kid-card-header">
+        <span class="kid-card-avatar">${kid.avatar}</span>
+        <span class="kid-card-name">${kid.name}</span>
+        <div class="kid-card-pts">
+          <div class="pts-current" id="pts-c-${gi}">${done}</div>
+          <div class="pts-target">/ ${total} pts</div>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-${gi}" style="width:${Math.min(100,(done/total)*100)}%"></div></div>
+      <div id="tw-${gi}"></div>
+      <div class="done-banner">⭐ QUEST COMPLETE ⭐</div>
+    `;
+    grid.appendChild(card);
+    // Group by room
+    const byRoom={};
+    tasks.forEach(t=>{if(!byRoom[t.room])byRoom[t.room]=[];byRoom[t.room].push(t);});
+    const wrap=card.querySelector(`#tw-${gi}`);
+    Object.entries(byRoom).forEach(([room,rtasks])=>{
+      const lbl=document.createElement('div');
+      lbl.className='kid-card-section-label';
+      lbl.textContent=room;
+      wrap.appendChild(lbl);
+      const td=document.createElement('div');
+      td.className='kid-tasks';
+      rtasks.forEach(task=>{
+        const item=document.createElement('div');
+        item.className='task-item'+(task.done?' checked':'');
+        const dl=task.pts===1?'easy':task.pts===2?'medium':'hard';
+        const bc=task.everyone?'star':dl;
+        item.innerHTML=`<div class="task-checkbox">${task.done?'✓':''}</div><span class="task-name">${task.name}</span><span class="diff-badge ${bc}">${task.everyone?'⭐':task.pts+'pt'}</span>`;
+        item.addEventListener('click',()=>{
+          task.done=!task.done;saveState();
+          task.done?playCheck():playUncheck();
+          item.classList.toggle('checked',task.done);
+          item.querySelector('.task-checkbox').textContent=task.done?'✓':'';
+          updateKidProgress(gi,localIdx);checkAllDone();
+        });
+        td.appendChild(item);
+      });
+      wrap.appendChild(td);
+    });
+  });
+}
+
+function updateKidProgress(gi,localIdx){
+  const tasks=state.assignments[gi]||[];
+  const done=tasks.filter(t=>t.done).reduce((s,t)=>s+t.pts,0);
+  const total=tasks.reduce((s,t)=>s+t.pts,0);
+  document.getElementById(`pts-c-${gi}`).textContent=done;
+  document.getElementById(`prog-${gi}`).style.width=Math.min(100,(done/total)*100)+'%';
+  const card=document.getElementById(`kid-card-${gi}`);
+  const was=card.classList.contains('done');
+  const isDone=done>=total;
+  card.classList.toggle('done',isDone);
+  if(isDone&&!was)playComplete();
+}
+
+function checkAllDone(){
+  if(getActiveKids().every(kid=>{const gi=state.kids.indexOf(kid);return(state.assignments[gi]||[]).every(t=>t.done);})){
+    playAllDone();spawnConfetti();
+    setTimeout(()=>document.getElementById('allDoneOverlay').classList.add('show'),1200);
+  }
+}
+
+function spawnConfetti(){
+  const cols=['#f4c842','#ff6b6b','#6ba3ff','#c56bff','#6bffb8'];
+  for(let i=0;i<80;i++){
+    const el=document.createElement('div');
+    el.className='confetti-piece';
+    el.style.cssText=`left:${Math.random()*100}vw;top:-20px;background:${cols[Math.floor(Math.random()*cols.length)]};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;animation-delay:${Math.random()*1.5}s;animation-duration:${2+Math.random()*2}s;`;
+    document.body.appendChild(el);setTimeout(()=>el.remove(),4000);
+  }
+}
+
+/* SETTINGS */
+function renderSettings(){
+  const ks=document.getElementById('kidsSettings');
+  ks.innerHTML='';
+  state.kids.forEach((kid,i)=>{
+    const row=document.createElement('div');
+    row.className='task-row';
+    row.innerHTML=`<span style="font-size:1.2rem">${kid.avatar}</span><span class="task-row-name">${kid.name}</span><button class="btn-sm" onclick="removeKid(${i})">✕</button>`;
+    ks.appendChild(row);
+  });
+
+  const fh=document.getElementById('fairnessHistory');
+  fh.innerHTML='';
+  if(!state.fewerHistory.length){
+    fh.innerHTML='<div style="font-size:0.8rem;color:var(--text-muted);padding:6px 0">No history yet.</div>';
+  } else {
+    state.fewerHistory.forEach((name,i)=>{
+      const ki=state.kids.findIndex(k=>k.name===name);
+      const col=KID_COLORS[ki%KID_COLORS.length]||'#aaa';
+      const row=document.createElement('div');
+      row.className='fairness-row';
+      row.innerHTML=`<div class="fairness-dot" style="background:${col}"></div><span>#${i+1}</span><span style="flex:1">${name}</span><span style="color:var(--text-muted);font-size:0.75rem">got fewer pts</span>`;
+      fh.appendChild(row);
+    });
+  }
+
+  const rs=document.getElementById('roomsSettings');
+  rs.innerHTML='';
+  state.rooms.forEach((room,ri)=>{
+    const block=document.createElement('div');
+    block.className='room-block';
+    block.innerHTML=`
+      <div class="room-header">
+        <span class="room-name-display">📦 ${room.name}</span>
+        <button class="btn-sm" onclick="removeRoom(${ri})">✕ Room</button>
+      </div>
+      <div id="rt-${ri}"></div>
+      <div class="add-row" style="margin-top:6px">
+        <input class="input-sm" id="nt-${ri}" placeholder="New task...">
+        <select class="select-pts" id="np-${ri}"><option value="1">1pt Easy</option><option value="2">2pt Med</option><option value="3">3pt Hard</option></select>
+        <button class="btn-sm primary" onclick="addTask(${ri})">+</button>
+      </div>
+    `;
+    rs.appendChild(block);
+    const td=block.querySelector(`#rt-${ri}`);
+    room.tasks.forEach((task,ti)=>{
+      const row=document.createElement('div');
+      row.className='task-row';
+      row.innerHTML=`<span class="task-row-name">${task.name}</span><span title="Toggle everyone" class="star-toggle ${task.everyone?'on':''}" onclick="toggleEvery(${ri},${ti},this)">⭐</span><select class="select-pts" onchange="changePts(${ri},${ti},this.value)"><option value="1" ${task.pts===1?'selected':''}>1pt</option><option value="2" ${task.pts===2?'selected':''}>2pt</option><option value="3" ${task.pts===3?'selected':''}>3pt</option></select><button class="btn-sm" onclick="removeTask(${ri},${ti})">✕</button>`;
+      td.appendChild(row);
+    });
+  });
+}
+
+function toggleEvery(ri,ti,el){state.rooms[ri].tasks[ti].everyone=!state.rooms[ri].tasks[ti].everyone;el.classList.toggle('on',state.rooms[ri].tasks[ti].everyone);}
+function changePts(ri,ti,v){state.rooms[ri].tasks[ti].pts=parseInt(v);}
+function removeTask(ri,ti){state.rooms[ri].tasks.splice(ti,1);renderSettings();}
+function removeRoom(ri){if(confirm(`Remove room "${state.rooms[ri].name}"?`)){state.rooms.splice(ri,1);renderSettings();}}
+function removeKid(i){if(confirm(`Remove ${state.kids[i].name}?`)){state.kids.splice(i,1);renderSettings();}}
+function addTask(ri){
+  const n=document.getElementById(`nt-${ri}`).value.trim();
+  const p=parseInt(document.getElementById(`np-${ri}`).value);
+  if(!n)return;
+  state.rooms[ri].tasks.push({name:n,pts:p,everyone:false});
+  document.getElementById(`nt-${ri}`).value='';
+  renderSettings();
+}
+document.getElementById('addRoomBtn').addEventListener('click',()=>{
+  const v=document.getElementById('newRoomName').value.trim();
+  if(!v)return;state.rooms.push({name:v,tasks:[]});
+  document.getElementById('newRoomName').value='';renderSettings();
+});
+const AVTS=['👧','👦','🧒','🧑','👩','👨'];
+document.getElementById('addKidBtn').addEventListener('click',()=>{
+  const v=document.getElementById('newKidName').value.trim();
+  if(!v)return;
+  state.kids.push({name:v,avatar:AVTS[state.kids.length%AVTS.length],active:true});
+  document.getElementById('newKidName').value='';renderSettings();
+});
+document.getElementById('resetFairnessBtn').addEventListener('click',()=>{
+  if(confirm('Reset fairness history?')){state.fewerHistory=[];renderSettings();showToast('Fairness history reset!');}
+});
+document.getElementById('settingsBtn').addEventListener('click',()=>{renderSettings();document.getElementById('settings-overlay').classList.add('open');});
+document.getElementById('closeSettings').addEventListener('click',()=>document.getElementById('settings-overlay').classList.remove('open'));
+document.getElementById('settings-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('settings-overlay'))document.getElementById('settings-overlay').classList.remove('open');});
+document.getElementById('saveSettings').addEventListener('click',()=>{saveState();document.getElementById('settings-overlay').classList.remove('open');showToast('Settings saved!');renderHome();});
+
+/* NAV */
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+document.getElementById('homeBtn').addEventListener('click',()=>{playClick();showScreen('home');});
+document.getElementById('rollBtn').addEventListener('click',()=>{playClick();doAssign();});
+document.getElementById('goBtn').addEventListener('click',()=>{playClick();renderQuest();});
+document.getElementById('redrawBtn').addEventListener('click',()=>{playClick();doAssign();});
+document.getElementById('newDayBtn').addEventListener('click',()=>{
+  playClick();
+  document.getElementById('allDoneOverlay').classList.remove('show');
+  state.assignments=null;state.today=null;saveState();renderHome();showScreen('home');
+});
+
+/* INIT */
+loadState();renderHome();
+if(state.assignments&&state.today===new Date().toDateString())renderQuest();
+else showScreen('home');
+</script>
+</body>
+</html>
