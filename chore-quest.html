@@ -51,11 +51,15 @@
   .points-preview .stat { text-align: center; }
   .points-preview .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--accent); line-height: 1; }
   .points-preview .stat-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-  .roll-section { text-align: center; }
+  .roll-section { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
   .btn-roll { background: var(--accent); color: var(--bg); border: none; border-radius: var(--radius); font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 4px; padding: 20px 60px; cursor: pointer; transition: all 0.2s; box-shadow: 0 6px 0 #b8921a, 0 0 40px rgba(244,200,66,0.3); position: relative; top: 0; }
   .btn-roll:hover { top: -3px; box-shadow: 0 9px 0 #b8921a, 0 0 60px rgba(244,200,66,0.4); }
   .btn-roll:active { top: 4px; box-shadow: 0 2px 0 #b8921a; }
   .btn-roll:disabled { opacity: 0.4; cursor: not-allowed; top: 0; }
+  .btn-roll-secondary { background: transparent; color: var(--accent4); border: 2px solid var(--accent4); border-radius: var(--radius); font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 3px; padding: 14px 40px; cursor: pointer; transition: all 0.2s; position: relative; top: 0; }
+  .btn-roll-secondary:hover { background: rgba(107,163,255,0.1); top: -2px; }
+  .btn-roll-secondary:active { top: 2px; }
+  .btn-roll-secondary:disabled { opacity: 0.3; cursor: not-allowed; top: 0; }
 
   /* ASSIGN */
   #spin { padding: 24px 28px; }
@@ -217,7 +221,8 @@
         <div class="stat"><div class="stat-val" id="targetPts">0</div><div class="stat-label">Target Each</div></div>
       </div>
       <div class="roll-section">
-        <button class="btn-roll" id="rollBtn">⚡ ASSIGN QUESTS ⚡</button>
+        <button class="btn-roll" id="rollBtn">⚡ ASSIGN NEW QUESTS ⚡</button>
+        <button class="btn-roll-secondary" id="seeQuestsBtn">👀 SEE ACTIVE QUESTS</button>
       </div>
     </div>
   </div>
@@ -502,6 +507,8 @@ function renderHome(){
   document.getElementById('activeKids').textContent=n;
   document.getElementById('targetPts').textContent=target;
   document.getElementById('rollBtn').disabled=n===0;
+  const hasActive = !!(state.assignments && state.today===new Date().toDateString());
+  document.getElementById('seeQuestsBtn').disabled=!hasActive;
 }
 
 /* ASSIGN ANIMATION */
@@ -873,6 +880,10 @@ function renderPinSetup(){
 /* Gated actions */
 document.getElementById('homeBtn').addEventListener('click',()=>{playClick();showScreen('home');});
 document.getElementById('goBtn').addEventListener('click',()=>{playClick();renderQuest();});
+document.getElementById('seeQuestsBtn').addEventListener('click',()=>{
+  playClick();
+  if(state.assignments && state.today===new Date().toDateString()) renderQuest();
+});
 
 // rollBtn: first assignment of the day needs no PIN; subsequent do
 document.getElementById('rollBtn').addEventListener('click',()=>{
