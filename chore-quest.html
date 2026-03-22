@@ -709,87 +709,35 @@ function spawnConfetti(){
   }
 }
 
-/* SETTINGS */
-function renderSettings(){
-  const ks=document.getElementById('kidsSettings');
-  ks.innerHTML='';
-  state.kids.forEach((kid,i)=>{
-    const row=document.createElement('div');
-    row.className='task-row';
-    row.innerHTML=`<span style="font-size:1.2rem">${kid.avatar}</span><span class="task-row-name">${kid.name}</span><button class="btn-sm" onclick="removeKid(${i})">✕</button>`;
-    ks.appendChild(row);
-  });
-
-  const fh=document.getElementById('fairnessHistory');
-  fh.innerHTML='';
-  if(!state.fewerHistory.length){
-    fh.innerHTML='<div style="font-size:0.8rem;color:var(--text-muted);padding:6px 0">No history yet.</div>';
-  } else {
-    state.fewerHistory.forEach((name,i)=>{
-      const ki=state.kids.findIndex(k=>k.name===name);
-      const col=KID_COLORS[ki%KID_COLORS.length]||'#aaa';
-      const row=document.createElement('div');
-      row.className='fairness-row';
-      row.innerHTML=`<div class="fairness-dot" style="background:${col}"></div><span>#${i+1}</span><span style="flex:1">${name}</span><span style="color:var(--text-muted);font-size:0.75rem">got fewer pts</span>`;
-      fh.appendChild(row);
-    });
-  }
-
-  const rs=document.getElementById('roomsSettings');
-  rs.innerHTML='';
-  state.rooms.forEach((room,ri)=>{
-    const block=document.createElement('div');
-    block.className='room-block';
-    block.innerHTML=`
-      <div class="room-header">
-        <span class="room-name-display">📦 ${room.name}</span>
-        <button class="btn-sm" onclick="removeRoom(${ri})">✕ Room</button>
-      </div>
-      <div id="rt-${ri}"></div>
-      <div class="add-row" style="margin-top:6px">
-        <input class="input-sm" id="nt-${ri}" placeholder="New task...">
-        <select class="select-pts" id="np-${ri}"><option value="1">1pt Easy</option><option value="2">2pt Med</option><option value="3">3pt Hard</option></select>
-        <button class="btn-sm primary" onclick="addTask(${ri})">+</button>
-      </div>
-    `;
-    rs.appendChild(block);
-    const td=block.querySelector(`#rt-${ri}`);
-    room.tasks.forEach((task,ti)=>{
-      const row=document.createElement('div');
-      row.className='task-row';
-      row.innerHTML=`<span class="task-row-name">${task.name}</span><span title="Toggle everyone" class="star-toggle ${task.everyone?'on':''}" onclick="toggleEvery(${ri},${ti},this)">⭐</span><select class="select-pts" onchange="changePts(${ri},${ti},this.value)"><option value="1" ${task.pts===1?'selected':''}>1pt</option><option value="2" ${task.pts===2?'selected':''}>2pt</option><option value="3" ${task.pts===3?'selected':''}>3pt</option></select><button class="btn-sm" onclick="removeTask(${ri},${ti})">✕</button>`;
-      td.appendChild(row);
-    });
-  });
-}
+/* SETTINGS helpers (called from openSettings and inline onclick) */
 
 function toggleEvery(ri,ti,el){state.rooms[ri].tasks[ti].everyone=!state.rooms[ri].tasks[ti].everyone;el.classList.toggle('on',state.rooms[ri].tasks[ti].everyone);}
 function changePts(ri,ti,v){state.rooms[ri].tasks[ti].pts=parseInt(v);}
-function removeTask(ri,ti){state.rooms[ri].tasks.splice(ti,1);renderSettings();}
-function removeRoom(ri){if(confirm(`Remove room "${state.rooms[ri].name}"?`)){state.rooms.splice(ri,1);renderSettings();}}
-function removeKid(i){if(confirm(`Remove ${state.kids[i].name}?`)){state.kids.splice(i,1);renderSettings();}}
+function removeTask(ri,ti){state.rooms[ri].tasks.splice(ti,1);openSettings();}
+function removeRoom(ri){if(confirm(`Remove room "${state.rooms[ri].name}"?`)){state.rooms.splice(ri,1);openSettings();}}
+function removeKid(i){if(confirm(`Remove ${state.kids[i].name}?`)){state.kids.splice(i,1);openSettings();}}
 function addTask(ri){
   const n=document.getElementById(`nt-${ri}`).value.trim();
   const p=parseInt(document.getElementById(`np-${ri}`).value);
   if(!n)return;
   state.rooms[ri].tasks.push({name:n,pts:p,everyone:false});
   document.getElementById(`nt-${ri}`).value='';
-  renderSettings();
+  openSettings();
 }
 document.getElementById('addRoomBtn').addEventListener('click',()=>{
   const v=document.getElementById('newRoomName').value.trim();
   if(!v)return;state.rooms.push({name:v,tasks:[]});
-  document.getElementById('newRoomName').value='';renderSettings();
+  document.getElementById('newRoomName').value='';openSettings();
 });
 const AVTS=['👧','👦','🧒','🧑','👩','👨'];
 document.getElementById('addKidBtn').addEventListener('click',()=>{
   const v=document.getElementById('newKidName').value.trim();
   if(!v)return;
   state.kids.push({name:v,avatar:AVTS[state.kids.length%AVTS.length],active:true});
-  document.getElementById('newKidName').value='';renderSettings();
+  document.getElementById('newKidName').value='';openSettings();
 });
 document.getElementById('resetFairnessBtn').addEventListener('click',()=>{
-  if(confirm('Reset fairness history?')){state.fewerHistory=[];renderSettings();showToast('Fairness history reset!');}
+  if(confirm('Reset fairness history?')){state.fewerHistory=[];openSettings();showToast('Fairness history reset!');}
 });
 // settingsBtn handled below with PIN gate
 document.getElementById('closeSettings').addEventListener('click',()=>document.getElementById('settings-overlay').classList.remove('open'));
@@ -818,7 +766,8 @@ function requirePin(callback){
 }
 
 function openPinModal(mode, callback){
-  pinMode=mode; pinCallback=callback; pinBuffer=''; pinNewCandidate='';
+  pinMode=mode; pinCallback=callback; pinBuffer='';
+  if(mode!=='confirm-new') pinNewCandidate='';
   document.getElementById('pinError').textContent='';
   updatePinDots();
   if(mode==='verify'){
@@ -905,29 +854,20 @@ function renderPinSetup(){
   if(!hasPin()){
     area.innerHTML=`<div style="font-size:0.82rem;font-weight:700;color:var(--text-muted);margin-bottom:10px">No PIN set. Anyone can reassign tasks.</div><button class="btn-sm primary" id="setPinBtn" style="font-size:0.85rem;padding:8px 16px">🔐 Set PIN</button>`;
     area.querySelector('#setPinBtn').addEventListener('click',()=>{
-      closePinModal(); // close settings first feel
       document.getElementById('settings-overlay').classList.remove('open');
-      openPinModal('set-new', null);
+      openPinModal('set-new', ()=>{ openSettings(); });
     });
   } else {
     area.innerHTML=`<div style="font-size:0.82rem;font-weight:700;color:var(--accent3);margin-bottom:10px">✓ PIN is active</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sm primary" id="changePinBtn" style="font-size:0.85rem;padding:8px 16px">🔄 Change PIN</button><button class="btn-sm" id="removePinBtn" style="font-size:0.85rem;padding:8px 16px">✕ Remove PIN</button></div>`;
     area.querySelector('#changePinBtn').addEventListener('click',()=>{
       document.getElementById('settings-overlay').classList.remove('open');
-      // Must verify old pin first
-      openPinModal('verify',()=>{ openPinModal('set-new',null); });
+      openPinModal('verify',()=>{ openPinModal('set-new', ()=>{ openSettings(); }); });
     });
     area.querySelector('#removePinBtn').addEventListener('click',()=>{
       document.getElementById('settings-overlay').classList.remove('open');
-      openPinModal('verify',()=>{ localStorage.removeItem('chorequest_pin'); showToast('PIN removed.'); renderSettings(); });
+      openPinModal('verify',()=>{ localStorage.removeItem('chorequest_pin'); showToast('PIN removed.'); openSettings(); });
     });
   }
-}
-
-/* Override renderSettings to also render PIN */
-const _origRenderSettings=renderSettings;
-function renderSettings(){
-  _origRenderSettings();
-  renderPinSetup();
 }
 
 /* Gated actions */
@@ -938,7 +878,7 @@ document.getElementById('goBtn').addEventListener('click',()=>{playClick();rende
 document.getElementById('rollBtn').addEventListener('click',()=>{
   playClick();
   const alreadyAssignedToday = state.assignments && state.today===new Date().toDateString();
-  if(alreadyAssignedToday){
+  if(alreadyAssignedToday && hasPin()){
     requirePin(()=>doAssign());
   } else {
     doAssign();
@@ -954,8 +894,62 @@ document.getElementById('redrawBtn').addEventListener('click',()=>{
 // settingsBtn always requires PIN
 document.getElementById('settingsBtn').addEventListener('click',()=>{
   playClick();
-  requirePin(()=>{ renderSettings(); document.getElementById('settings-overlay').classList.add('open'); });
+  requirePin(()=>{ openSettings(); });
 });
+
+function openSettings(){
+  // Rebuild settings content then show panel
+  const ks=document.getElementById('kidsSettings');
+  ks.innerHTML='';
+  state.kids.forEach((kid,i)=>{
+    const row=document.createElement('div');
+    row.className='task-row';
+    row.innerHTML=`<span style="font-size:1.2rem">${kid.avatar}</span><span class="task-row-name">${kid.name}</span><button class="btn-sm" onclick="removeKid(${i})">✕</button>`;
+    ks.appendChild(row);
+  });
+  const fh=document.getElementById('fairnessHistory');
+  fh.innerHTML='';
+  if(!state.fewerHistory.length){
+    fh.innerHTML='<div style="font-size:0.8rem;color:var(--text-muted);padding:6px 0">No history yet.</div>';
+  } else {
+    state.fewerHistory.forEach((name,i)=>{
+      const ki=state.kids.findIndex(k=>k.name===name);
+      const col=KID_COLORS[ki%KID_COLORS.length]||'#aaa';
+      const row=document.createElement('div');
+      row.className='fairness-row';
+      row.innerHTML=`<div class="fairness-dot" style="background:${col}"></div><span>#${i+1}</span><span style="flex:1">${name}</span><span style="color:var(--text-muted);font-size:0.75rem">got fewer pts</span>`;
+      fh.appendChild(row);
+    });
+  }
+  const rs=document.getElementById('roomsSettings');
+  rs.innerHTML='';
+  state.rooms.forEach((room,ri)=>{
+    const block=document.createElement('div');
+    block.className='room-block';
+    block.innerHTML=`
+      <div class="room-header">
+        <span class="room-name-display">📦 ${room.name}</span>
+        <button class="btn-sm" onclick="removeRoom(${ri})">✕ Room</button>
+      </div>
+      <div id="rt-${ri}"></div>
+      <div class="add-row" style="margin-top:6px">
+        <input class="input-sm" id="nt-${ri}" placeholder="New task...">
+        <select class="select-pts" id="np-${ri}"><option value="1">1pt Easy</option><option value="2">2pt Med</option><option value="3">3pt Hard</option></select>
+        <button class="btn-sm primary" onclick="addTask(${ri})">+</button>
+      </div>
+    `;
+    rs.appendChild(block);
+    const td=block.querySelector(`#rt-${ri}`);
+    room.tasks.forEach((task,ti)=>{
+      const row=document.createElement('div');
+      row.className='task-row';
+      row.innerHTML=`<span class="task-row-name">${task.name}</span><span title="Toggle everyone" class="star-toggle ${task.everyone?'on':''}" onclick="toggleEvery(${ri},${ti},this)">⭐</span><select class="select-pts" onchange="changePts(${ri},${ti},this.value)"><option value="1" ${task.pts===1?'selected':''}>1pt</option><option value="2" ${task.pts===2?'selected':''}>2pt</option><option value="3" ${task.pts===3?'selected':''}>3pt</option></select><button class="btn-sm" onclick="removeTask(${ri},${ti})">✕</button>`;
+      td.appendChild(row);
+    });
+  });
+  renderPinSetup();
+  document.getElementById('settings-overlay').classList.add('open');
+}
 
 document.getElementById('newDayBtn').addEventListener('click',()=>{
   playClick();
