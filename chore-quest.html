@@ -175,6 +175,26 @@
   @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.85;transform:scale(1.03);}}
   .confetti-piece { position: fixed; border-radius: 2px; animation: confettifall 3s ease-in forwards; z-index: 300; pointer-events: none; }
   @keyframes confettifall{0%{transform:translateY(-60px) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+
+  /* PIN MODAL */
+  #pin-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
+  #pin-overlay.open { display:flex; }
+  .pin-box { background:var(--surface); border:2px solid var(--surface2); border-radius:var(--radius); padding:32px 28px; width:100%; max-width:340px; text-align:center; }
+  .pin-title { font-family:'Bebas Neue',sans-serif; font-size:1.8rem; letter-spacing:3px; color:var(--accent); margin-bottom:6px; }
+  .pin-sub { font-size:0.82rem; font-weight:700; color:var(--text-muted); margin-bottom:24px; }
+  .pin-dots { display:flex; justify-content:center; gap:14px; margin-bottom:24px; }
+  .pin-dot { width:18px; height:18px; border-radius:50%; border:2px solid var(--surface2); background:transparent; transition:all 0.15s; }
+  .pin-dot.filled { background:var(--accent); border-color:var(--accent); box-shadow:0 0 10px rgba(244,200,66,0.5); }
+  .pin-dot.error { background:var(--accent2); border-color:var(--accent2); box-shadow:0 0 10px rgba(255,107,107,0.5); }
+  .pin-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .pin-key { background:var(--surface2); border:2px solid transparent; border-radius:12px; color:var(--text); font-family:'Bebas Neue',sans-serif; font-size:1.6rem; letter-spacing:2px; padding:14px 0; cursor:pointer; transition:all 0.15s; }
+  .pin-key:hover { border-color:var(--accent); color:var(--accent); }
+  .pin-key:active { transform:scale(0.93); }
+  .pin-key.del { font-family:'Nunito',sans-serif; font-size:1rem; font-weight:900; letter-spacing:0; }
+  .pin-key.wide { grid-column:1/-1; background:rgba(244,200,66,0.08); color:var(--accent); border-color:rgba(244,200,66,0.2); font-size:1rem; font-family:'Nunito',sans-serif; font-weight:900; letter-spacing:1px; }
+  .pin-error-msg { font-size:0.8rem; font-weight:800; color:var(--accent2); margin-top:12px; min-height:1.2em; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+  .pin-dots.shake { animation:shake 0.4s ease; }
 </style>
 </head>
 <body>
@@ -227,6 +247,35 @@
   </div>
 </div>
 
+<!-- PIN MODAL -->
+<div id="pin-overlay">
+  <div class="pin-box">
+    <div class="pin-title" id="pinTitle">🔐 Parent PIN</div>
+    <div class="pin-sub" id="pinSub">Enter your 4-digit PIN to continue</div>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key del" onclick="pinDel()">⌫</button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key del" onclick="pinCancel()">✕</button>
+    </div>
+    <div class="pin-error-msg" id="pinError"></div>
+  </div>
+</div>
+
 <div id="settings-overlay">
   <div class="settings-panel">
     <div class="settings-header">
@@ -246,6 +295,10 @@
         <div class="settings-section-title">Fairness History <span style="font-size:0.7rem;color:var(--text-muted)">(who got fewer pts, most recent last)</span></div>
         <div id="fairnessHistory"></div>
         <div style="margin-top:8px"><button class="btn-sm" id="resetFairnessBtn">↺ Reset History</button></div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-title">Parent PIN</div>
+        <div id="pinSetupArea"></div>
       </div>
       <div class="settings-section">
         <div class="settings-section-title">Rooms & Tasks <span style="font-size:0.7rem;color:var(--text-muted)">⭐ = everyone does it</span></div>
@@ -738,7 +791,7 @@ document.getElementById('addKidBtn').addEventListener('click',()=>{
 document.getElementById('resetFairnessBtn').addEventListener('click',()=>{
   if(confirm('Reset fairness history?')){state.fewerHistory=[];renderSettings();showToast('Fairness history reset!');}
 });
-document.getElementById('settingsBtn').addEventListener('click',()=>{renderSettings();document.getElementById('settings-overlay').classList.add('open');});
+// settingsBtn handled below with PIN gate
 document.getElementById('closeSettings').addEventListener('click',()=>document.getElementById('settings-overlay').classList.remove('open'));
 document.getElementById('settings-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('settings-overlay'))document.getElementById('settings-overlay').classList.remove('open');});
 document.getElementById('saveSettings').addEventListener('click',()=>{saveState();document.getElementById('settings-overlay').classList.remove('open');showToast('Settings saved!');renderHome();});
@@ -746,10 +799,164 @@ document.getElementById('saveSettings').addEventListener('click',()=>{saveState(
 /* NAV */
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+/* ── PIN ──────────────────────────────────────────────────────────────────── */
+let pinBuffer='';
+let pinCallback=null;  // fn to call on success
+let pinMode='verify';  // 'verify' | 'set-new' | 'confirm-new'
+let pinNewCandidate='';
+
+function getStoredPin(){ return localStorage.getItem('chorequest_pin')||''; }
+function setStoredPin(p){ localStorage.setItem('chorequest_pin',p); }
+function hasPin(){ return getStoredPin().length===4; }
+
+// requirePin(callback) — if no pin set OR first assignment of day not yet done, skip straight to callback.
+// Otherwise show keypad.
+function requirePin(callback){
+  if(!hasPin()){ callback(); return; }
+  openPinModal('verify', callback);
+}
+
+function openPinModal(mode, callback){
+  pinMode=mode; pinCallback=callback; pinBuffer=''; pinNewCandidate='';
+  document.getElementById('pinError').textContent='';
+  updatePinDots();
+  if(mode==='verify'){
+    document.getElementById('pinTitle').textContent='🔐 Parent PIN';
+    document.getElementById('pinSub').textContent='Enter your 4-digit PIN to continue';
+  } else if(mode==='set-new'){
+    document.getElementById('pinTitle').textContent='🔐 Set a PIN';
+    document.getElementById('pinSub').textContent='Choose a new 4-digit PIN';
+  } else if(mode==='confirm-new'){
+    document.getElementById('pinTitle').textContent='🔐 Confirm PIN';
+    document.getElementById('pinSub').textContent='Enter the same PIN again';
+  }
+  document.getElementById('pin-overlay').classList.add('open');
+}
+
+function closePinModal(){ document.getElementById('pin-overlay').classList.remove('open'); pinBuffer=''; }
+
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById(`pd${i}`);
+    d.classList.toggle('filled', i<pinBuffer.length);
+    d.classList.remove('error');
+  }
+}
+
+function pinErrorShake(msg){
+  document.getElementById('pinError').textContent=msg;
+  const dots=document.getElementById('pinDots');
+  for(let i=0;i<4;i++) document.getElementById(`pd${i}`).classList.add('error');
+  dots.classList.remove('shake');
+  void dots.offsetWidth;
+  dots.classList.add('shake');
+  tone(200,'square',0.15,0.2);
+  setTimeout(()=>{ pinBuffer=''; updatePinDots(); dots.classList.remove('shake'); },500);
+}
+
+function pinKey(digit){
+  if(pinBuffer.length>=4) return;
+  tone(600+(parseInt(digit)*40),'sine',0.06,0.15);
+  pinBuffer+=digit;
+  updatePinDots();
+  if(pinBuffer.length===4) setTimeout(pinSubmit, 120);
+}
+
+function pinDel(){
+  if(!pinBuffer.length) return;
+  tone(400,'sine',0.05,0.12);
+  pinBuffer=pinBuffer.slice(0,-1);
+  updatePinDots();
+}
+
+function pinCancel(){ tone(300,'sine',0.08,0.15); closePinModal(); }
+
+function pinSubmit(){
+  if(pinMode==='verify'){
+    if(pinBuffer===getStoredPin()){
+      tone(784,'sine',0.12,0.3); tone(1047,'sine',0.15,0.35,0.1);
+      closePinModal();
+      if(pinCallback) pinCallback();
+    } else {
+      pinErrorShake('Wrong PIN. Try again.');
+    }
+  } else if(pinMode==='set-new'){
+    pinNewCandidate=pinBuffer; pinBuffer='';
+    openPinModal('confirm-new', pinCallback);
+  } else if(pinMode==='confirm-new'){
+    if(pinBuffer===pinNewCandidate){
+      setStoredPin(pinBuffer);
+      tone(523,'sine',0.15,0.3); tone(659,'sine',0.15,0.3,0.1); tone(784,'sine',0.18,0.35,0.2);
+      closePinModal();
+      showToast('PIN saved!');
+      renderSettings();
+    } else {
+      pinErrorShake("PINs don't match. Try again.");
+      setTimeout(()=>{ pinNewCandidate=''; openPinModal('set-new', pinCallback); },600);
+    }
+  }
+}
+
+// Render PIN section in settings
+function renderPinSetup(){
+  const area=document.getElementById('pinSetupArea');
+  if(!area) return;
+  if(!hasPin()){
+    area.innerHTML=`<div style="font-size:0.82rem;font-weight:700;color:var(--text-muted);margin-bottom:10px">No PIN set. Anyone can reassign tasks.</div><button class="btn-sm primary" id="setPinBtn" style="font-size:0.85rem;padding:8px 16px">🔐 Set PIN</button>`;
+    area.querySelector('#setPinBtn').addEventListener('click',()=>{
+      closePinModal(); // close settings first feel
+      document.getElementById('settings-overlay').classList.remove('open');
+      openPinModal('set-new', null);
+    });
+  } else {
+    area.innerHTML=`<div style="font-size:0.82rem;font-weight:700;color:var(--accent3);margin-bottom:10px">✓ PIN is active</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn-sm primary" id="changePinBtn" style="font-size:0.85rem;padding:8px 16px">🔄 Change PIN</button><button class="btn-sm" id="removePinBtn" style="font-size:0.85rem;padding:8px 16px">✕ Remove PIN</button></div>`;
+    area.querySelector('#changePinBtn').addEventListener('click',()=>{
+      document.getElementById('settings-overlay').classList.remove('open');
+      // Must verify old pin first
+      openPinModal('verify',()=>{ openPinModal('set-new',null); });
+    });
+    area.querySelector('#removePinBtn').addEventListener('click',()=>{
+      document.getElementById('settings-overlay').classList.remove('open');
+      openPinModal('verify',()=>{ localStorage.removeItem('chorequest_pin'); showToast('PIN removed.'); renderSettings(); });
+    });
+  }
+}
+
+/* Override renderSettings to also render PIN */
+const _origRenderSettings=renderSettings;
+function renderSettings(){
+  _origRenderSettings();
+  renderPinSetup();
+}
+
+/* Gated actions */
 document.getElementById('homeBtn').addEventListener('click',()=>{playClick();showScreen('home');});
-document.getElementById('rollBtn').addEventListener('click',()=>{playClick();doAssign();});
 document.getElementById('goBtn').addEventListener('click',()=>{playClick();renderQuest();});
-document.getElementById('redrawBtn').addEventListener('click',()=>{playClick();doAssign();});
+
+// rollBtn: first assignment of the day needs no PIN; subsequent do
+document.getElementById('rollBtn').addEventListener('click',()=>{
+  playClick();
+  const alreadyAssignedToday = state.assignments && state.today===new Date().toDateString();
+  if(alreadyAssignedToday){
+    requirePin(()=>doAssign());
+  } else {
+    doAssign();
+  }
+});
+
+// redrawBtn always requires PIN
+document.getElementById('redrawBtn').addEventListener('click',()=>{
+  playClick();
+  requirePin(()=>doAssign());
+});
+
+// settingsBtn always requires PIN
+document.getElementById('settingsBtn').addEventListener('click',()=>{
+  playClick();
+  requirePin(()=>{ renderSettings(); document.getElementById('settings-overlay').classList.add('open'); });
+});
+
 document.getElementById('newDayBtn').addEventListener('click',()=>{
   playClick();
   document.getElementById('allDoneOverlay').classList.remove('show');
