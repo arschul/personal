@@ -297,6 +297,10 @@
         </div>
       </div>
       <div class="settings-section">
+        <div class="settings-section-title">🍽️ Do the Dishes Rotation <span style="font-size:0.7rem;color:var(--text-muted)">(next up = first in list)</span></div>
+        <div id="dishRotationSettings"></div>
+      </div>
+      <div class="settings-section">
         <div class="settings-section-title">Fairness History <span style="font-size:0.7rem;color:var(--text-muted)">(who got fewer pts, most recent last)</span></div>
         <div id="fairnessHistory"></div>
         <div style="margin-top:8px"><button class="btn-sm" id="resetFairnessBtn">↺ Reset History</button></div>
@@ -370,7 +374,7 @@ const DEFAULT_DATA = {
 
 const KID_COLORS=['#f4c842','#ff6b6b','#6ba3ff','#c56bff'];
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[]};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[]};
 
 function loadState(){
   try{
@@ -380,6 +384,7 @@ function loadState(){
       state.kids=p.kids||DEFAULT_DATA.kids.map(k=>({...k}));
       state.rooms=p.rooms||DEFAULT_DATA.rooms.map(r=>({...r,tasks:r.tasks.map(t=>({...t}))}));
       state.fewerHistory=p.fewerHistory||[];
+      state.dishRotation=p.dishRotation||['Samuel','Lucca','Pedro','Bianca'];
       const today=new Date().toDateString();
       if(p.today===today&&p.assignments){state.assignments=p.assignments;state.today=today;}
       return;
@@ -388,12 +393,13 @@ function loadState(){
   state.kids=DEFAULT_DATA.kids.map(k=>({...k}));
   state.rooms=DEFAULT_DATA.rooms.map(r=>({...r,tasks:r.tasks.map(t=>({...t}))}));
   state.fewerHistory=[];
+  state.dishRotation=['Samuel','Lucca','Pedro','Bianca'];
 }
 
 function saveState(){
   localStorage.setItem('chorequest_v3',JSON.stringify({
     kids:state.kids,rooms:state.rooms,assignments:state.assignments,
-    today:state.today,fewerHistory:state.fewerHistory
+    today:state.today,fewerHistory:state.fewerHistory,dishRotation:state.dishRotation
   }));
 }
 
@@ -459,31 +465,77 @@ function distributeTasks(){
   for(const room of state.rooms){
     for(const task of room.tasks){
       const t={name:task.name,pts:task.pts,everyone:task.everyone,done:false,room:room.name};
-      task.everyone?starTasks.push(t):poolTasks.push(t);
+      if(task.everyone) starTasks.push(t);
+      else if(task.name==='Do the dishes') { /* handled separately */ }
+      else poolTasks.push(t);
     }
   }
-  for(let i=poolTasks.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[poolTasks[i],poolTasks[j]]=[poolTasks[j],poolTasks[i]];}
+
   const kidIdx=activeKids.map((_,i)=>state.kids.indexOf(activeKids[i]));
   const assignments={};
   kidIdx.forEach(i=>{assignments[i]=starTasks.map(t=>({...t}));});
   const kidPts={};
   kidIdx.forEach(i=>{kidPts[i]=assignments[i].reduce((s,t)=>s+t.pts,0);});
+
+  // ── Dish rotation ──────────────────────────────────────────────────────────
+  // Find "Do the dishes" task definition
+  let dishTask=null;
+  for(const room of state.rooms)
+    for(const task of room.tasks)
+      if(task.name==='Do the dishes') dishTask={name:task.name,pts:task.pts,everyone:false,done:false,room:room.name};
+
+  if(dishTask){
+    // Find first active kid in rotation order
+    let dishKidName=null;
+    for(const name of state.dishRotation){
+      if(activeKids.find(k=>k.name===name)){ dishKidName=name; break; }
+    }
+    if(dishKidName){
+      const dishGI=state.kids.findIndex(k=>k.name===dishKidName);
+      if(dishGI!==-1){
+        assignments[dishGI].push({...dishTask});
+        kidPts[dishGI]+=dishTask.pts;
+      }
+      // Advance rotation: move this name to the end
+      state.dishRotation=state.dishRotation.filter(n=>n!==dishKidName);
+      state.dishRotation.push(dishKidName);
+    }
+  }
+
+  // ── Pool distribution ──────────────────────────────────────────────────────
+  // Sort hardest-first so greedy assignment produces balanced totals.
+  // Within same point value, shuffle to avoid deterministic ordering.
+  const byPts={};
+  for(const t of poolTasks){
+    if(!byPts[t.pts]) byPts[t.pts]=[];
+    byPts[t.pts].push(t);
+  }
+  // Shuffle within each tier, then concat hard→easy
+  for(const tier of Object.values(byPts)){
+    for(let i=tier.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[tier[i],tier[j]]=[tier[j],tier[i]];}
+  }
+  const sorted=[...(byPts[3]||[]),...(byPts[2]||[]),...(byPts[1]||[])];
+
   const fairnessLocal=getFairnessTarget(activeKids);
   const fairnessGlobal=kidIdx[fairnessLocal];
-  const sorted=[...poolTasks].sort((a,b)=>b.pts-a.pts);
+
   for(const task of sorted){
     const under=kidIdx.filter(i=>kidPts[i]<target);
     const underNF=under.filter(i=>i!==fairnessGlobal);
     const pool=underNF.length>0?underNF:under.length>0?under:kidIdx;
-    const pick=pool.reduce((best,i)=>kidPts[i]<kidPts[best]?i:best,pool[0]);
+    // Random tie-break among lowest-scoring candidates
+    const minP=Math.min(...pool.map(i=>kidPts[i]));
+    const tied=pool.filter(i=>kidPts[i]===minP);
+    const pick=tied[Math.floor(Math.random()*tied.length)];
     assignments[pick].push({...task});
     kidPts[pick]+=task.pts;
   }
+
   const minPts=Math.min(...kidIdx.map(i=>kidPts[i]));
   const fewerGI=kidIdx.find(i=>kidPts[i]===minPts);
   const fewerKid=fewerGI!==undefined?activeKids[kidIdx.indexOf(fewerGI)]:null;
   if(fewerKid){
-    state.fewerHistory=state.fewerHistory.filter(n=>n!==fewerKid.name);
+    state.fewerHistory=state.fewerHistory.filter(nm=>nm!==fewerKid.name);
     state.fewerHistory.push(fewerKid.name);
   }
   return{assignments,kidPts};
@@ -718,6 +770,9 @@ function spawnConfetti(){
 
 /* SETTINGS helpers (called from openSettings and inline onclick) */
 
+function moveDishUp(i){ if(i===0)return;[state.dishRotation[i-1],state.dishRotation[i]]=[state.dishRotation[i],state.dishRotation[i-1]];saveState();openSettings(); }
+function moveDishDown(i){ if(i===state.dishRotation.length-1)return;[state.dishRotation[i+1],state.dishRotation[i]]=[state.dishRotation[i],state.dishRotation[i+1]];saveState();openSettings(); }
+
 function toggleEvery(ri,ti,el){state.rooms[ri].tasks[ti].everyone=!state.rooms[ri].tasks[ti].everyone;el.classList.toggle('on',state.rooms[ri].tasks[ti].everyone);}
 function changePts(ri,ti,v){state.rooms[ri].tasks[ti].pts=parseInt(v);}
 function removeTask(ri,ti){state.rooms[ri].tasks.splice(ti,1);openSettings();}
@@ -918,6 +973,25 @@ function openSettings(){
     row.innerHTML=`<span style="font-size:1.2rem">${kid.avatar}</span><span class="task-row-name">${kid.name}</span><button class="btn-sm" onclick="removeKid(${i})">✕</button>`;
     ks.appendChild(row);
   });
+
+  // Dish rotation
+  const dr=document.getElementById('dishRotationSettings');
+  dr.innerHTML='';
+  state.dishRotation.forEach((name,i)=>{
+    const ki=state.kids.findIndex(k=>k.name===name);
+    const col=KID_COLORS[ki%KID_COLORS.length]||'#aaa';
+    const row=document.createElement('div');
+    row.className='fairness-row';
+    row.innerHTML=`
+      <div class="fairness-dot" style="background:${col}"></div>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:1px;color:${i===0?'var(--accent3)':'inherit'}">${i===0?'▶ NEXT: ':''}</span>
+      <span style="flex:1;font-weight:${i===0?900:700};color:${i===0?'var(--accent3)':'inherit'}">${name}</span>
+      <button class="btn-sm" style="padding:2px 6px" onclick="moveDishUp(${i})" ${i===0?'disabled':''}>↑</button>
+      <button class="btn-sm" style="padding:2px 6px" onclick="moveDishDown(${i})" ${i===state.dishRotation.length-1?'disabled':''}>↓</button>
+    `;
+    dr.appendChild(row);
+  });
+
   const fh=document.getElementById('fairnessHistory');
   fh.innerHTML='';
   if(!state.fewerHistory.length){
