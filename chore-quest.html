@@ -443,24 +443,11 @@ function calcPoints(){
   return{total:starPts*n+poolPts,target:Math.round(starPts+poolPts/n)};
 }
 
-/* FAIRNESS */
-function getFairnessTarget(activeKids){
-  const names=activeKids.map(k=>k.name);
-  const notYet=names.filter(n=>!state.fewerHistory.includes(n));
-  if(notYet.length===0){
-    const last=state.fewerHistory[state.fewerHistory.length-1];
-    state.fewerHistory=last?[last]:[];
-    const nn=names.filter(n=>!state.fewerHistory.includes(n));
-    return activeKids.findIndex(k=>k.name===nn[0]);
-  }
-  return activeKids.findIndex(k=>k.name===notYet[0]);
-}
-
 /* DISTRIBUTION */
 function distributeTasks(){
   const activeKids=getActiveKids();
   const n=activeKids.length;
-  const {target}=calcPoints();
+
   const starTasks=[],poolTasks=[];
   for(const room of state.rooms){
     for(const task of room.tasks){
@@ -478,61 +465,53 @@ function distributeTasks(){
   kidIdx.forEach(i=>{kidPts[i]=assignments[i].reduce((s,t)=>s+t.pts,0);});
 
   // ── Dish rotation ──────────────────────────────────────────────────────────
-  // Find "Do the dishes" task definition
   let dishTask=null;
   for(const room of state.rooms)
     for(const task of room.tasks)
       if(task.name==='Do the dishes') dishTask={name:task.name,pts:task.pts,everyone:false,done:false,room:room.name};
 
   if(dishTask){
-    // Find first active kid in rotation order
     let dishKidName=null;
     for(const name of state.dishRotation){
       if(activeKids.find(k=>k.name===name)){ dishKidName=name; break; }
     }
     if(dishKidName){
       const dishGI=state.kids.findIndex(k=>k.name===dishKidName);
-      if(dishGI!==-1){
-        assignments[dishGI].push({...dishTask});
-        kidPts[dishGI]+=dishTask.pts;
-      }
-      // Advance rotation: move this name to the end
-      state.dishRotation=state.dishRotation.filter(n=>n!==dishKidName);
+      if(dishGI!==-1){ assignments[dishGI].push({...dishTask}); kidPts[dishGI]+=dishTask.pts; }
+      state.dishRotation=state.dishRotation.filter(nm=>nm!==dishKidName);
       state.dishRotation.push(dishKidName);
     }
   }
 
-  // ── Pool distribution ──────────────────────────────────────────────────────
-  // Sort hardest-first so greedy assignment produces balanced totals.
-  // Within same point value, shuffle to avoid deterministic ordering.
+  // ── Perfectly balanced pool distribution ──────────────────────────────────
+  // Split pool into tiers and shuffle each independently.
   const byPts={};
   for(const t of poolTasks){
     if(!byPts[t.pts]) byPts[t.pts]=[];
     byPts[t.pts].push(t);
   }
-  // Shuffle within each tier, then concat hard→easy
-  for(const tier of Object.values(byPts)){
-    for(let i=tier.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[tier[i],tier[j]]=[tier[j],tier[i]];}
-  }
-  const sorted=[...(byPts[3]||[]),...(byPts[2]||[]),...(byPts[1]||[])];
+  function fisherYates(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
+  for(const pts of Object.keys(byPts)) fisherYates(byPts[pts]);
 
-  const fairnessLocal=getFairnessTarget(activeKids);
-  const fairnessGlobal=kidIdx[fairnessLocal];
+  // Shuffle the kid order freshly for each tier so no kid always leads
+  function shuffledKidOrder(){ return fisherYates([...kidIdx]); }
 
-  for(const task of sorted){
-    const under=kidIdx.filter(i=>kidPts[i]<target);
-    const underNF=under.filter(i=>i!==fairnessGlobal);
-    const pool=underNF.length>0?underNF:under.length>0?under:kidIdx;
-    // Random tie-break among lowest-scoring candidates
-    const minP=Math.min(...pool.map(i=>kidPts[i]));
-    const tied=pool.filter(i=>kidPts[i]===minP);
-    const pick=tied[Math.floor(Math.random()*tied.length)];
-    assignments[pick].push({...task});
-    kidPts[pick]+=task.pts;
+  // For each point tier, deal cards round-robin: kid0 gets task0, kid1 gets task1, etc.
+  // This guarantees equal count per tier when tasks divide evenly, and at most ±1 when they don't.
+  for(const pts of Object.keys(byPts).sort((a,b)=>b-a)){ // hard first just for display order
+    const tier=byPts[pts];
+    const order=shuffledKidOrder();
+    tier.forEach((task,i)=>{
+      const ki=order[i % order.length];
+      assignments[ki].push({...task});
+      kidPts[ki]+=task.pts;
+    });
   }
 
+  // Record fairness
   const minPts=Math.min(...kidIdx.map(i=>kidPts[i]));
-  const fewerGI=kidIdx.find(i=>kidPts[i]===minPts);
+  const fewerCandidates=kidIdx.filter(i=>kidPts[i]===minPts);
+  const fewerGI=fewerCandidates[Math.floor(Math.random()*fewerCandidates.length)];
   const fewerKid=fewerGI!==undefined?activeKids[kidIdx.indexOf(fewerGI)]:null;
   if(fewerKid){
     state.fewerHistory=state.fewerHistory.filter(nm=>nm!==fewerKid.name);
