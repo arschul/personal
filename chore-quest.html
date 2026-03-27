@@ -532,73 +532,72 @@ function calcPoints(){
 /* DISTRIBUTION */
 function distributeTasks(){
   const activeKids=getActiveKids();
-  const n=activeKids.length;
 
-  const starTasks=[],poolTasks=[];
+  // Collect tasks
+  const starTasks=[], poolTasks=[];
+  let dishTaskDef=null;
   for(const room of state.rooms){
     for(const task of room.tasks){
       const t={name:task.name,pts:task.pts,everyone:task.everyone,done:false,room:room.name};
-      if(task.everyone) starTasks.push(t);
-      else if(task.name==='Do the dishes') { /* handled separately */ }
-      else poolTasks.push(t);
+      if(task.everyone)            starTasks.push(t);
+      else if(task.name==='Do the dishes') dishTaskDef=t;
+      else                         poolTasks.push(t);
     }
   }
 
   const kidIdx=activeKids.map((_,i)=>state.kids.indexOf(activeKids[i]));
   const assignments={};
-  kidIdx.forEach(i=>{assignments[i]=starTasks.map(t=>({...t}));});
+  kidIdx.forEach(i=>{ assignments[i]=starTasks.map(t=>({...t})); });
+
+  // Running totals — start with star pts
   const kidPts={};
-  kidIdx.forEach(i=>{kidPts[i]=assignments[i].reduce((s,t)=>s+t.pts,0);});
+  kidIdx.forEach(i=>{ kidPts[i]=assignments[i].reduce((s,t)=>s+t.pts,0); });
 
-  // ── Dish rotation ──────────────────────────────────────────────────────────
-  let dishTask=null;
-  for(const room of state.rooms)
-    for(const task of room.tasks)
-      if(task.name==='Do the dishes') dishTask={name:task.name,pts:task.pts,everyone:false,done:false,room:room.name};
-
-  if(dishTask){
+  // ── Step 1: assign dishes to rotation kid ─────────────────────────────────
+  // Do this BEFORE pool distribution so greedy sees their head-start pts.
+  if(dishTaskDef){
     let dishKidName=null;
     for(const name of state.dishRotation){
       if(activeKids.find(k=>k.name===name)){ dishKidName=name; break; }
     }
     if(dishKidName){
       const dishGI=state.kids.findIndex(k=>k.name===dishKidName);
-      if(dishGI!==-1){ assignments[dishGI].push({...dishTask}); kidPts[dishGI]+=dishTask.pts; }
+      if(dishGI!==-1){
+        assignments[dishGI].push({...dishTaskDef});
+        kidPts[dishGI]+=dishTaskDef.pts;
+      }
       state.dishRotation=state.dishRotation.filter(nm=>nm!==dishKidName);
       state.dishRotation.push(dishKidName);
     }
   }
 
-  // ── Perfectly balanced pool distribution ──────────────────────────────────
-  // Split pool into tiers and shuffle each independently.
-  const byPts={};
-  for(const t of poolTasks){
-    if(!byPts[t.pts]) byPts[t.pts]=[];
-    byPts[t.pts].push(t);
+  // ── Step 2: shuffle pool within each tier then sort hard→easy ─────────────
+  // Shuffle within tier for randomness; hard-first so greedy fills gaps well.
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+    return arr;
   }
-  function fisherYates(arr){ for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; }
-  for(const pts of Object.keys(byPts)) fisherYates(byPts[pts]);
+  const sortedPool=[
+    ...shuffle(poolTasks.filter(t=>t.pts===3)),
+    ...shuffle(poolTasks.filter(t=>t.pts===2)),
+    ...shuffle(poolTasks.filter(t=>t.pts===1)),
+  ];
 
-  // Shuffle the kid order freshly for each tier so no kid always leads
-  function shuffledKidOrder(){ return fisherYates([...kidIdx]); }
-
-  // For each point tier, deal cards round-robin: kid0 gets task0, kid1 gets task1, etc.
-  // This guarantees equal count per tier when tasks divide evenly, and at most ±1 when they don't.
-  for(const pts of Object.keys(byPts).sort((a,b)=>b-a)){ // hard first just for display order
-    const tier=byPts[pts];
-    const order=shuffledKidOrder();
-    tier.forEach((task,i)=>{
-      const ki=order[i % order.length];
-      assignments[ki].push({...task});
-      kidPts[ki]+=task.pts;
-    });
+  // ── Step 3: greedy — always assign to the kid with fewest pts ─────────────
+  // Because the dish kid already has +3 pts, they'll naturally receive fewer
+  // pool tasks until others catch up, producing the fairest possible totals.
+  for(const task of sortedPool){
+    const minP=Math.min(...kidIdx.map(i=>kidPts[i]));
+    const tied=kidIdx.filter(i=>kidPts[i]===minP);
+    const pick=tied[Math.floor(Math.random()*tied.length)];
+    assignments[pick].push({...task});
+    kidPts[pick]+=task.pts;
   }
 
-  // Record fairness
+  // ── Record fairness ────────────────────────────────────────────────────────
   const minPts=Math.min(...kidIdx.map(i=>kidPts[i]));
-  const fewerCandidates=kidIdx.filter(i=>kidPts[i]===minPts);
-  const fewerGI=fewerCandidates[Math.floor(Math.random()*fewerCandidates.length)];
-  const fewerKid=fewerGI!==undefined?activeKids[kidIdx.indexOf(fewerGI)]:null;
+  const fewerGI=kidIdx.filter(i=>kidPts[i]===minPts);
+  const fewerKid=activeKids[kidIdx.indexOf(fewerGI[Math.floor(Math.random()*fewerGI.length)])];
   if(fewerKid){
     state.fewerHistory=state.fewerHistory.filter(nm=>nm!==fewerKid.name);
     state.fewerHistory.push(fewerKid.name);
