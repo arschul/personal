@@ -180,6 +180,52 @@
   .confetti-piece { position: fixed; border-radius: 2px; animation: confettifall 3s ease-in forwards; z-index: 300; pointer-events: none; }
   @keyframes confettifall{0%{transform:translateY(-60px) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
 
+  /* SCORE SCREEN */
+  .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 8px; }
+  .score-card { background: var(--surface); border: 2px solid var(--surface2); border-radius: var(--radius); padding: 18px; text-align: center; }
+  .score-card-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 2px; margin-bottom: 4px; }
+  .score-pct { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; line-height: 1; margin-bottom: 4px; }
+  .score-pct-label { font-size: 0.7rem; font-weight: 800; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+  .score-breakdown { display: flex; justify-content: center; gap: 10px; margin-top: 10px; }
+  .score-pill { font-size: 0.7rem; font-weight: 900; padding: 3px 8px; border-radius: 100px; letter-spacing: 0.5px; }
+  .score-pill.a { background: rgba(107,255,184,0.15); color: var(--accent3); }
+  .score-pill.b { background: rgba(244,200,66,0.15); color: var(--medium); }
+  .score-pill.c { background: rgba(255,107,107,0.15); color: var(--hard); }
+  .score-days { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-top: 6px; }
+  .grade-bar { height: 6px; border-radius: 3px; background: var(--surface2); margin-top: 10px; overflow: hidden; display: flex; gap: 2px; }
+  .grade-bar-seg { height: 100%; border-radius: 2px; transition: width 0.4s; }
+
+  /* Grading panel */
+  .grading-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 3px; color: var(--text-muted); margin-bottom: 14px; }
+  .grading-kid { background: var(--surface); border: 2px solid var(--surface2); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 12px; }
+  .grading-kid-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .grading-kid-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 2px; }
+  .grading-task-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .grading-task-row:last-child { border-bottom: none; }
+  .grading-task-name { flex: 1; font-size: 0.85rem; font-weight: 700; }
+  .grade-btn-group { display: flex; gap: 4px; }
+  .grade-btn { width: 32px; height: 32px; border-radius: 8px; border: 2px solid var(--surface2); background: transparent; color: var(--text-muted); font-family: 'Bebas Neue', sans-serif; font-size: 1rem; cursor: pointer; transition: all 0.15s; }
+  .grade-btn.active-a { background: rgba(107,255,184,0.2); border-color: var(--accent3); color: var(--accent3); }
+  .grade-btn.active-b { background: rgba(244,200,66,0.2); border-color: var(--medium); color: var(--medium); }
+  .grade-btn.active-c { background: rgba(255,107,107,0.2); border-color: var(--hard); color: var(--hard); }
+  .grade-btn:hover { border-color: var(--text-muted); color: var(--text); }
+  .grading-no-quests { text-align: center; padding: 24px; color: var(--text-muted); font-weight: 700; font-size: 0.9rem; }
+
+  /* REPORT SCREEN */
+  .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+  .report-card { background: var(--surface); border: 2px solid var(--surface2); border-radius: var(--radius); padding: 22px; }
+  .report-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .report-card-avatar { font-size: 2rem; }
+  .report-card-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; letter-spacing: 2px; }
+  .report-card-pct { margin-left: auto; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; line-height: 1; }
+  .report-pie-wrap { display: flex; align-items: center; gap: 20px; }
+  .report-pie-wrap canvas { flex-shrink: 0; }
+  .report-legend { display: flex; flex-direction: column; gap: 8px; }
+  .report-legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 800; }
+  .report-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .report-legend-count { margin-left: auto; font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; }
+  .report-empty { text-align:center; padding:40px 20px; color:var(--text-muted); font-weight:700; }
+
   /* PIN MODAL */
   #pin-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:500; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
   #pin-overlay.open { display:flex; }
@@ -207,6 +253,7 @@
     <div class="logo">Chore Quest<span>Daily Mission Control</span></div>
     <div class="header-actions">
       <button class="btn-icon" id="homeBtn">🏠</button>
+      <button class="btn-icon" id="scoreBtn">📊</button>
       <button class="btn-icon" id="settingsBtn">⚙️</button>
     </div>
   </header>
@@ -248,6 +295,37 @@
         <button class="btn-sm primary" id="redrawBtn">↺ Reassign</button>
       </div>
       <div class="quest-grid" id="questGrid"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="score">
+    <div style="padding:24px 28px">
+      <div class="quest-header">
+        <div>
+          <div class="quest-title">📊 Performance</div>
+          <div class="quest-date" id="scorePeriod"></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-sm" id="scoreBackBtn">← Back</button>
+          <button class="btn-sm primary" id="reportBtn">📈 Report</button>
+          <button class="btn-sm" id="clearScoreBtn" style="border-color:var(--accent2);color:var(--accent2)">🗑 Clear</button>
+        </div>
+      </div>
+      <div id="scoreGrid"></div>
+      <div id="gradingPanel" style="margin-top:28px"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="report">
+    <div style="padding:24px 28px">
+      <div class="quest-header">
+        <div>
+          <div class="quest-title">📈 Period Report</div>
+          <div class="quest-date" id="reportPeriod"></div>
+        </div>
+        <button class="btn-sm primary" id="reportBackBtn">← Back</button>
+      </div>
+      <div id="reportContent"></div>
     </div>
   </div>
 </div>
@@ -327,7 +405,10 @@
 <div class="all-done-overlay" id="allDoneOverlay">
   <div class="all-done-text">🎉 ALL DONE! 🎉</div>
   <div class="all-done-sub">Every hero completed their quests today!</div>
-  <button class="btn-new-day" id="newDayBtn">🌅 New Day</button>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:28px">
+    <button class="btn-new-day" id="newDayBtn">🌅 New Day</button>
+    <button class="btn-new-day" id="allDoneBackBtn" style="background:var(--surface2);color:var(--text);box-shadow:none">← Back</button>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -374,7 +455,7 @@ const DEFAULT_DATA = {
 
 const KID_COLORS=['#f4c842','#ff6b6b','#6ba3ff','#c56bff'];
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[]};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],scoreHistory:[],scorePeriodStart:null};
 
 function loadState(){
   try{
@@ -385,6 +466,8 @@ function loadState(){
       state.rooms=p.rooms||DEFAULT_DATA.rooms.map(r=>({...r,tasks:r.tasks.map(t=>({...t}))}));
       state.fewerHistory=p.fewerHistory||[];
       state.dishRotation=p.dishRotation||['Samuel','Lucca','Pedro','Bianca'];
+      state.scoreHistory=p.scoreHistory||[];
+      state.scorePeriodStart=p.scorePeriodStart||null;
       const today=new Date().toDateString();
       if(p.today===today&&p.assignments){state.assignments=p.assignments;state.today=today;}
       return;
@@ -394,12 +477,15 @@ function loadState(){
   state.rooms=DEFAULT_DATA.rooms.map(r=>({...r,tasks:r.tasks.map(t=>({...t}))}));
   state.fewerHistory=[];
   state.dishRotation=['Samuel','Lucca','Pedro','Bianca'];
+  state.scoreHistory=[];
+  state.scorePeriodStart=null;
 }
 
 function saveState(){
   localStorage.setItem('chorequest_v3',JSON.stringify({
     kids:state.kids,rooms:state.rooms,assignments:state.assignments,
-    today:state.today,fewerHistory:state.fewerHistory,dishRotation:state.dishRotation
+    today:state.today,fewerHistory:state.fewerHistory,dishRotation:state.dishRotation,
+    scoreHistory:state.scoreHistory,scorePeriodStart:state.scorePeriodStart
   }));
 }
 
@@ -785,6 +871,288 @@ document.getElementById('closeSettings').addEventListener('click',()=>document.g
 document.getElementById('settings-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('settings-overlay'))document.getElementById('settings-overlay').classList.remove('open');});
 document.getElementById('saveSettings').addEventListener('click',()=>{saveState();document.getElementById('settings-overlay').classList.remove('open');showToast('Settings saved!');renderHome();});
 
+/* ── SCORE SCREEN ────────────────────────────────────────────────────────── */
+// scoreHistory: array of day entries
+// { date: 'Mon Jan 01 2025', grades: { kidName: { taskName: 'A'|'B'|'C' } } }
+// Grade weights: A=100, B=70, C=40
+const GRADE_WEIGHT={A:100,B:70,C:40};
+
+function getOrCreateTodayGrades(){
+  const today=new Date().toDateString();
+  let entry=state.scoreHistory.find(e=>e.date===today);
+  if(!entry){
+    entry={date:today, grades:{}};
+    state.scoreHistory.push(entry);
+    if(!state.scorePeriodStart) state.scorePeriodStart=today;
+  }
+  return entry;
+}
+
+function setGrade(kidName, taskName, grade){
+  const entry=getOrCreateTodayGrades();
+  if(!entry.grades[kidName]) entry.grades[kidName]={};
+  entry.grades[kidName][taskName]=grade;
+  saveState();
+  renderScoreScreen();
+}
+
+function getGrade(kidName, taskName){
+  const today=new Date().toDateString();
+  const entry=state.scoreHistory.find(e=>e.date===today);
+  return entry?.grades?.[kidName]?.[taskName]||'A';
+}
+
+// Call this when opening score screen — writes A for any task not yet graded
+function ensureTodayGradesPopulated(){
+  const today=new Date().toDateString();
+  if(!state.assignments || state.today!==today) return;
+  const entry=getOrCreateTodayGrades();
+  const activeKids=getActiveKids();
+  let changed=false;
+  activeKids.forEach(kid=>{
+    const gi=state.kids.indexOf(kid);
+    const tasks=state.assignments[gi]||[];
+    if(!entry.grades[kid.name]) entry.grades[kid.name]={};
+    tasks.forEach(task=>{
+      if(entry.grades[kid.name][task.name]===undefined){
+        entry.grades[kid.name][task.name]='A';
+        changed=true;
+      }
+    });
+  });
+  if(changed) saveState();
+}
+
+function calcKidStats(kidName){
+  // Across all days in scoreHistory, tally grades
+  let totalTasks=0, sumPct=0, countA=0, countB=0, countC=0;
+  for(const entry of state.scoreHistory){
+    const grades=entry.grades?.[kidName];
+    if(!grades) continue;
+    for(const g of Object.values(grades)){
+      totalTasks++;
+      sumPct+=GRADE_WEIGHT[g]||100;
+      if(g==='A') countA++;
+      else if(g==='B') countB++;
+      else countC++;
+    }
+  }
+  const pct=totalTasks>0?Math.round(sumPct/totalTasks):null;
+  return{pct,countA,countB,countC,totalTasks,days:state.scoreHistory.filter(e=>e.grades?.[kidName]&&Object.keys(e.grades[kidName]).length>0).length};
+}
+
+function renderScoreScreen(){
+  ensureTodayGradesPopulated();
+  // Period label
+  const periodEl=document.getElementById('scorePeriod');
+  if(state.scorePeriodStart){
+    const start=new Date(state.scorePeriodStart).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const now=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    periodEl.textContent=`Period: ${start} – ${now} · ${state.scoreHistory.length} day${state.scoreHistory.length===1?'':'s'}`;
+  } else {
+    periodEl.textContent='No data yet. Grade today\'s quests below.';
+  }
+
+  // Summary cards
+  const grid=document.getElementById('scoreGrid');
+  grid.innerHTML='';
+  const gridEl=document.createElement('div');
+  gridEl.className='score-grid';
+  grid.appendChild(gridEl);
+
+  state.kids.forEach((kid,i)=>{
+    const stats=calcKidStats(kid.name);
+    const col=KID_COLORS[i%KID_COLORS.length];
+    const pctDisplay=stats.pct!==null?`${stats.pct}%`:'—';
+    const pctColor=stats.pct===null?'var(--text-muted)':stats.pct>=90?'var(--accent3)':stats.pct>=70?'var(--medium)':'var(--hard)';
+    // Bar
+    const total=stats.countA+stats.countB+stats.countC||1;
+    const aW=Math.round(stats.countA/total*100);
+    const bW=Math.round(stats.countB/total*100);
+    const cW=100-aW-bW;
+    const card=document.createElement('div');
+    card.className='score-card';
+    card.innerHTML=`
+      <div class="score-card-name" style="color:${col}">${kid.avatar} ${kid.name}</div>
+      <div class="score-pct" style="color:${pctColor}">${pctDisplay}</div>
+      <div class="score-pct-label">Overall Score</div>
+      <div class="score-breakdown">
+        <span class="score-pill a">A×${stats.countA}</span>
+        <span class="score-pill b">B×${stats.countB}</span>
+        <span class="score-pill c">C×${stats.countC}</span>
+      </div>
+      <div class="score-days">${stats.days} day${stats.days===1?'':'s'} graded · ${stats.totalTasks} tasks</div>
+      <div class="grade-bar">
+        <div class="grade-bar-seg" style="width:${aW}%;background:var(--accent3)"></div>
+        <div class="grade-bar-seg" style="width:${bW}%;background:var(--medium)"></div>
+        <div class="grade-bar-seg" style="width:${cW}%;background:var(--hard)"></div>
+      </div>
+    `;
+    gridEl.appendChild(card);
+  });
+
+  // Grading panel — today's tasks
+  const panel=document.getElementById('gradingPanel');
+  panel.innerHTML='';
+  const today=new Date().toDateString();
+  const hasToday=state.assignments&&state.today===today;
+
+  const titleEl=document.createElement('div');
+  titleEl.className='grading-title';
+  titleEl.textContent="TODAY'S GRADES";
+  panel.appendChild(titleEl);
+
+  if(!hasToday){
+    const msg=document.createElement('div');
+    msg.className='grading-no-quests';
+    msg.textContent='No quests assigned today yet. Assign quests first, then grade them here.';
+    panel.appendChild(msg);
+    return;
+  }
+
+  const activeKids=getActiveKids();
+  activeKids.forEach((kid,localIdx)=>{
+    const gi=state.kids.indexOf(kid);
+    const tasks=(state.assignments[gi]||[]);
+    const col=KID_COLORS[localIdx%KID_COLORS.length];
+
+    const kidBlock=document.createElement('div');
+    kidBlock.className='grading-kid';
+    const header=document.createElement('div');
+    header.className='grading-kid-header';
+    header.innerHTML=`<span style="font-size:1.6rem">${kid.avatar}</span><span class="grading-kid-name" style="color:${col}">${kid.name}</span>`;
+    kidBlock.appendChild(header);
+
+    tasks.forEach(task=>{
+      const currentGrade=getGrade(kid.name, task.name);
+      const row=document.createElement('div');
+      row.className='grading-task-row';
+      row.innerHTML=`
+        <span class="grading-task-name">${task.name}<span style="font-size:0.6rem;color:var(--text-muted);margin-left:6px;text-transform:uppercase;letter-spacing:0.5px">${task.room}</span></span>
+        <div class="grade-btn-group">
+          <button class="grade-btn ${currentGrade==='A'?'active-a':''}" onclick="setGrade('${kid.name}','${task.name}','A')">A</button>
+          <button class="grade-btn ${currentGrade==='B'?'active-b':''}" onclick="setGrade('${kid.name}','${task.name}','B')">B</button>
+          <button class="grade-btn ${currentGrade==='C'?'active-c':''}" onclick="setGrade('${kid.name}','${task.name}','C')">C</button>
+        </div>
+      `;
+      kidBlock.appendChild(row);
+    });
+    panel.appendChild(kidBlock);
+  });
+}
+
+/* ── REPORT SCREEN ───────────────────────────────────────────────────────── */
+function drawPie(canvas, a, b, c){
+  const ctx=canvas.getContext('2d');
+  const cx=canvas.width/2, cy=canvas.height/2, r=cx-4;
+  const total=a+b+c||1;
+  const slices=[
+    {val:a, color:'#6bffb8'},
+    {val:b, color:'#f4c842'},
+    {val:c, color:'#ff6b6b'},
+  ].filter(s=>s.val>0);
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  if(slices.length===0){
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.fill();
+    return;
+  }
+
+  let start=-Math.PI/2;
+  slices.forEach(s=>{
+    const angle=(s.val/total)*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,start+angle);
+    ctx.closePath();
+    ctx.fillStyle=s.color;
+    ctx.fill();
+    // subtle gap
+    ctx.strokeStyle='rgba(15,14,23,0.6)';
+    ctx.lineWidth=2;
+    ctx.stroke();
+    start+=angle;
+  });
+
+  // Inner circle cutout (donut)
+  ctx.beginPath(); ctx.arc(cx,cy,r*0.52,0,Math.PI*2);
+  ctx.fillStyle='#1a1928'; ctx.fill();
+}
+
+function renderReport(){
+  const content=document.getElementById('reportContent');
+  content.innerHTML='';
+
+  // Period label
+  const periodEl=document.getElementById('reportPeriod');
+  if(state.scorePeriodStart){
+    const start=new Date(state.scorePeriodStart).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    const now=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    periodEl.textContent=`${start} — ${now} · ${state.scoreHistory.length} day${state.scoreHistory.length===1?'':'s'}`;
+  } else {
+    periodEl.textContent='No data recorded yet.';
+  }
+
+  if(!state.scoreHistory.length){
+    content.innerHTML='<div class="report-empty">No grades recorded yet.<br>Grade today\'s quests in the Performance screen.</div>';
+    return;
+  }
+
+  const grid=document.createElement('div');
+  grid.className='report-grid';
+  content.appendChild(grid);
+
+  state.kids.forEach((kid,i)=>{
+    const stats=calcKidStats(kid.name);
+    if(stats.totalTasks===0) return;
+    const col=KID_COLORS[i%KID_COLORS.length];
+    const pctColor=stats.pct===null?'var(--text-muted)':stats.pct>=90?'#6bffb8':stats.pct>=70?'#f4c842':'#ff6b6b';
+
+    const card=document.createElement('div');
+    card.className='report-card';
+    card.style.borderColor=col+'44';
+    card.innerHTML=`
+      <div class="report-card-header">
+        <span class="report-card-avatar">${kid.avatar}</span>
+        <span class="report-card-name" style="color:${col}">${kid.name}</span>
+        <span class="report-card-pct" style="color:${pctColor}">${stats.pct??'—'}%</span>
+      </div>
+      <div class="report-pie-wrap">
+        <canvas id="pie-${kid.name}" width="120" height="120"></canvas>
+        <div class="report-legend">
+          <div class="report-legend-item">
+            <div class="report-legend-dot" style="background:#6bffb8"></div>
+            <span>A — Excellent</span>
+            <span class="report-legend-count" style="color:#6bffb8">${stats.countA}</span>
+          </div>
+          <div class="report-legend-item">
+            <div class="report-legend-dot" style="background:#f4c842"></div>
+            <span>B — Good</span>
+            <span class="report-legend-count" style="color:#f4c842">${stats.countB}</span>
+          </div>
+          <div class="report-legend-item">
+            <div class="report-legend-dot" style="background:#ff6b6b"></div>
+            <span>C — Needs work</span>
+            <span class="report-legend-count" style="color:#ff6b6b">${stats.countC}</span>
+          </div>
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);font-size:0.72rem;font-weight:700;color:var(--text-muted)">
+            ${stats.totalTasks} tasks · ${stats.days} day${stats.days===1?'':'s'}
+          </div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    // Draw pie after DOM insertion
+    requestAnimationFrame(()=>{
+      const canvas=document.getElementById(`pie-${kid.name}`);
+      if(canvas) drawPie(canvas, stats.countA, stats.countB, stats.countC);
+    });
+  });
+}
+
 /* NAV */
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
@@ -913,6 +1281,27 @@ function renderPinSetup(){
 
 /* Gated actions */
 document.getElementById('homeBtn').addEventListener('click',()=>{playClick();showScreen('home');});
+document.getElementById('scoreBtn').addEventListener('click',()=>{
+  playClick();
+  requirePin(()=>{renderScoreScreen();showScreen('score');});
+});
+document.getElementById('clearScoreBtn').addEventListener('click',()=>{
+  playClick();
+  requirePin(()=>{
+    if(confirm('Clear all score data and start a new period?')){
+      state.scoreHistory=[];state.scorePeriodStart=null;
+      saveState();renderScoreScreen();showToast('Period cleared!');
+    }
+  });
+});
+document.getElementById('scoreBackBtn').addEventListener('click',()=>{
+  playClick();
+  const hasActiveQuests=state.assignments&&state.today===new Date().toDateString();
+  if(hasActiveQuests) renderQuest();
+  else showScreen('home');
+});
+document.getElementById('reportBtn').addEventListener('click',()=>{playClick();renderReport();showScreen('report');});
+document.getElementById('reportBackBtn').addEventListener('click',()=>{playClick();showScreen('score');});
 document.getElementById('goBtn').addEventListener('click',()=>{playClick();renderQuest();});
 document.getElementById('seeQuestsBtn').addEventListener('click',()=>{
   playClick();
@@ -1017,8 +1406,14 @@ function openSettings(){
 
 document.getElementById('newDayBtn').addEventListener('click',()=>{
   playClick();
+  requirePin(()=>{
+    document.getElementById('allDoneOverlay').classList.remove('show');
+    state.assignments=null;state.today=null;saveState();renderHome();showScreen('home');
+  });
+});
+document.getElementById('allDoneBackBtn').addEventListener('click',()=>{
+  playClick();
   document.getElementById('allDoneOverlay').classList.remove('show');
-  state.assignments=null;state.today=null;saveState();renderHome();showScreen('home');
 });
 
 /* INIT */
