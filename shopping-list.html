@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Shopping List</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;400i&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -28,7 +28,7 @@
       display: flex;
       align-items: flex-start;
       justify-content: center;
-      padding: 48px 16px 80px;
+      padding: 40px 16px 80px;
       background-image:
         radial-gradient(ellipse at 80% 10%, #e8dcc8 0%, transparent 60%),
         radial-gradient(ellipse at 10% 90%, #ddd0bc 0%, transparent 60%);
@@ -38,11 +38,8 @@
       background: var(--paper);
       border-radius: 2px;
       width: 100%;
-      max-width: 540px;
-      box-shadow:
-        0 2px 0 #c9b99a,
-        0 8px 32px var(--shadow),
-        0 1px 2px rgba(0,0,0,0.06);
+      max-width: 560px;
+      box-shadow: 0 2px 0 #c9b99a, 0 8px 32px var(--shadow);
       overflow: hidden;
       position: relative;
     }
@@ -52,42 +49,68 @@
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 38px;
-      background: repeating-linear-gradient(
-        180deg, transparent, transparent 28px, #e8ddd0 28px, #e8ddd0 29px
-      );
+      background: repeating-linear-gradient(180deg, transparent, transparent 28px, #e8ddd0 28px, #e8ddd0 29px);
       border-right: 2px solid var(--line);
       z-index: 1;
     }
 
-    /* HEADER */
+    /* ── HEADER ── */
     .header {
-      padding: 28px 20px 20px 60px;
+      padding: 24px 20px 18px 60px;
       border-bottom: 2px solid var(--line);
       display: flex;
       align-items: flex-end;
       justify-content: space-between;
       gap: 12px;
+      flex-wrap: wrap;
     }
-    .header h1 {
+    .header-left h1 {
       font-family: 'Playfair Display', serif;
-      font-size: 1.9rem;
+      font-size: 1.8rem;
       color: var(--ink);
       letter-spacing: -0.5px;
       line-height: 1;
     }
+    .header-left .date-label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 0.05em;
+    }
+    .header-right {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .icon-btn {
+      background: none;
+      border: 2px solid var(--line);
+      border-radius: 2px;
+      padding: 5px 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.66rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .icon-btn:hover { border-color: var(--ink); color: var(--ink); }
+    .icon-btn.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+
     .mode-toggle {
       display: flex;
       border: 2px solid var(--line);
       border-radius: 2px;
       overflow: hidden;
-      flex-shrink: 0;
     }
     .mode-btn {
-      background: none;
-      border: none;
-      padding: 6px 11px;
+      background: none; border: none;
+      padding: 5px 10px;
       font-family: 'DM Mono', monospace;
-      font-size: 0.68rem;
+      font-size: 0.66rem;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--muted);
@@ -98,90 +121,95 @@
     .mode-btn + .mode-btn { border-left: 2px solid var(--line); }
     .mode-btn.active { background: var(--ink); color: #fff; }
 
-    /* ADD ROW */
+    /* ── HISTORY BAR ── */
+    .history-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px 10px 60px;
+      border-bottom: 1px solid var(--line);
+      background: #faf8f3;
+    }
+    .history-bar.open { display: flex; }
+    .history-bar select {
+      flex: 1;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--ink);
+      background: var(--paper);
+      border: 1.5px solid var(--line);
+      border-radius: 2px;
+      padding: 5px 8px;
+      outline: none;
+      cursor: pointer;
+    }
+    .history-bar select:focus { border-color: var(--accent); }
+
+    /* ── ADD ROW ── */
     .add-row {
       display: flex;
       gap: 8px;
-      padding: 16px 20px 16px 60px;
+      padding: 14px 20px 14px 60px;
       border-bottom: 2px solid var(--line);
       background: #faf8f3;
     }
     .add-row input[type="text"] {
       flex: 1;
-      background: transparent;
-      border: none;
+      background: transparent; border: none;
       border-bottom: 2px solid var(--line);
       padding: 6px 4px;
       font-family: 'DM Mono', monospace;
-      font-size: 0.85rem;
-      color: var(--ink);
-      outline: none;
-      transition: border-color 0.2s;
+      font-size: 0.85rem; color: var(--ink);
+      outline: none; transition: border-color 0.2s;
     }
     .add-row input[type="text"]::placeholder { color: #bbb0a0; }
     .add-row input[type="text"]:focus { border-color: var(--accent); }
     .btn-add {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 2px;
-      padding: 0 16px;
-      font-family: 'DM Mono', monospace;
-      font-size: 1.3rem;
-      cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-      line-height: 1;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: 2px;
+      padding: 0 16px; font-size: 1.3rem;
+      cursor: pointer; transition: background 0.15s, transform 0.1s; line-height: 1;
     }
     .btn-add:hover { background: #a83c10; }
     .btn-add:active { transform: scale(0.95); }
 
-    /* HINT */
+    /* ── HINT ── */
     .mode-hint {
-      padding: 9px 20px 9px 60px;
-      font-size: 0.68rem;
-      letter-spacing: 0.06em;
+      padding: 8px 20px 8px 60px;
+      font-size: 0.67rem; letter-spacing: 0.06em;
       color: var(--muted);
       border-bottom: 1px solid var(--line);
       background: #faf8f3;
     }
     body.planning .mode-hint { display: none; }
 
-    /* LIST */
-    .list { list-style: none; min-height: 60px; }
+    /* ── LIST ── */
+    .list { list-style: none; }
     .empty-state {
-      padding: 40px 60px 32px;
-      color: var(--muted);
-      font-size: 0.75rem;
-      letter-spacing: 0.06em;
-      text-align: center;
-      opacity: 0.7;
+      padding: 36px 60px 28px;
+      color: var(--muted); font-size: 0.75rem;
+      text-align: center; opacity: 0.7;
     }
 
-    /* ITEM — planning layout */
     .item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 13px 16px 13px 60px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px 12px 60px;
       border-bottom: 1px solid var(--line);
       transition: background 0.18s;
-      animation: slideIn 0.22s cubic-bezier(.22,1,.36,1);
+      animation: slideIn 0.2s cubic-bezier(.22,1,.36,1);
     }
     @keyframes slideIn {
-      from { opacity: 0; transform: translateY(-8px); }
+      from { opacity: 0; transform: translateY(-6px); }
       to   { opacity: 1; transform: translateY(0); }
     }
     .item:hover { background: #faf7f0; }
     .item.checked { background: var(--check-bg); }
 
-    /* Checkbox dot */
     .cb-label {
       width: 22px; height: 22px;
-      border: 2px solid var(--line);
-      border-radius: 2px;
+      border: 2px solid var(--line); border-radius: 2px;
       display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-      transition: border-color 0.15s, background 0.15s;
+      flex-shrink: 0; transition: border-color 0.15s, background 0.15s;
     }
     .item.checked .cb-label { background: var(--check); border-color: var(--check); }
     .cb-label svg { display: none; }
@@ -190,173 +218,211 @@
     body.shopping .cb-label { cursor: pointer; }
 
     .item-name {
-      flex: 1;
-      font-size: 0.88rem;
-      color: var(--ink);
-      word-break: break-word;
+      flex: 1; font-size: 0.87rem; color: var(--ink); word-break: break-word;
     }
-    .item.checked .item-name {
-      color: var(--muted);
-      text-decoration: line-through;
-      text-decoration-color: var(--check);
-    }
+    .item.checked .item-name { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--check); }
 
-    /* ── PLANNING: qty stepper on the right ── */
     .qty-stepper {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      border: 1.5px solid var(--line);
-      border-radius: 2px;
-      overflow: hidden;
-      flex-shrink: 0;
+      display: flex; align-items: center;
+      border: 1.5px solid var(--line); border-radius: 2px; overflow: hidden; flex-shrink: 0;
     }
     .qty-btn {
-      background: none;
-      border: none;
-      width: 28px; height: 28px;
-      font-size: 1rem;
-      color: var(--muted);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
+      background: none; border: none;
+      width: 26px; height: 26px; font-size: 1rem; color: var(--muted);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
       transition: background 0.12s, color 0.12s;
-      flex-shrink: 0;
-      line-height: 1;
     }
     .qty-btn:hover { background: var(--accent-light); color: var(--accent); }
     .qty-val {
-      width: 28px;
-      text-align: center;
-      font-size: 0.82rem;
-      color: var(--ink);
-      border-left: 1.5px solid var(--line);
-      border-right: 1.5px solid var(--line);
-      padding: 4px 0;
-      font-variant-numeric: tabular-nums;
-      user-select: none;
+      width: 26px; text-align: center; font-size: 0.8rem; color: var(--ink);
+      border-left: 1.5px solid var(--line); border-right: 1.5px solid var(--line);
+      padding: 3px 0; user-select: none;
     }
 
-    /* ── SHOPPING: price + qty + subtotal ── */
-    .shop-controls {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
-    /* unit price input */
-    .price-wrap {
-      display: flex;
-      align-items: center;
-      gap: 2px;
-    }
+    .shop-controls { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+    .price-wrap { display: flex; align-items: center; gap: 2px; }
     .price-symbol { color: var(--muted); font-size: 0.8rem; flex-shrink: 0; }
     .price-input {
-      width: 60px;
-      background: transparent;
-      border: none;
+      width: 58px; background: transparent; border: none;
       border-bottom: 1.5px solid var(--line);
-      padding: 3px 2px;
-      font-family: 'DM Mono', monospace;
-      font-size: 0.82rem;
-      color: var(--ink);
-      text-align: right;
-      outline: none;
-      transition: border-color 0.2s;
-      -moz-appearance: textfield;
+      padding: 3px 2px; font-family: 'DM Mono', monospace;
+      font-size: 0.8rem; color: var(--ink); text-align: right; outline: none;
+      transition: border-color 0.2s; -moz-appearance: textfield;
     }
     .price-input::-webkit-inner-spin-button,
     .price-input::-webkit-outer-spin-button { -webkit-appearance: none; }
     .price-input:focus { border-color: var(--accent); }
     .price-input::placeholder { color: #ccc0b0; }
-    .item.checked .price-input { color: var(--check); border-color: transparent; pointer-events: none; font-weight: 500; }
+    .item.checked .price-input { color: var(--check); border-color: transparent; font-weight: 500; }
     .item.checked .price-symbol { color: var(--check); }
+    .item.checked .qty-stepper { opacity: 0.5; }
 
-    /* qty stepper in shopping mode (slightly smaller) */
-    .shop-controls .qty-stepper {
-      border-color: var(--line);
-    }
-    .item.checked .qty-stepper {
-      opacity: 0.5;
-      pointer-events: none;
-    }
-
-    /* subtotal */
     .subtotal {
-      min-width: 58px;
-      text-align: right;
-      font-size: 0.82rem;
-      font-variant-numeric: tabular-nums;
-      color: var(--muted);
+      min-width: 55px; text-align: right;
+      font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums;
     }
     .item.checked .subtotal { color: var(--check); font-weight: 500; }
-    .subtotal.empty { color: #ccc0b0; font-style: italic; font-size: 0.72rem; }
+    .subtotal.empty { color: #ccc0b0; font-style: italic; font-size: 0.7rem; }
 
-    /* planning: show qty-stepper, hide shop-controls */
     body.planning .shop-controls { display: none; }
-    body.planning .qty-stepper  { display: flex; }
-
-    /* shopping: show shop-controls (which contains its own stepper), hide standalone qty-stepper */
+    body.planning .qty-stepper { display: flex; }
     body.shopping .qty-stepper.standalone { display: none; }
     body.shopping .shop-controls { display: flex; }
 
-    /* remove button */
     .btn-remove {
-      background: none;
-      border: none;
-      color: #ccc0b0;
-      cursor: pointer;
-      font-size: 0.9rem;
-      padding: 3px 5px;
-      border-radius: 2px;
-      line-height: 1;
-      transition: color 0.15s, background 0.15s;
-      flex-shrink: 0;
+      background: none; border: none; color: #ccc0b0;
+      cursor: pointer; font-size: 0.85rem; padding: 3px 5px;
+      border-radius: 2px; line-height: 1;
+      transition: color 0.15s, background 0.15s; flex-shrink: 0;
     }
     .btn-remove:hover { color: var(--accent); background: var(--accent-light); }
     body.shopping .btn-remove { display: none; }
 
-    /* FOOTER */
+    /* ── FOOTER ── */
     .footer {
-      padding: 18px 20px 22px 60px;
+      padding: 16px 20px 20px 60px;
       border-top: 2px solid var(--ink);
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      background: #faf8f3;
+      display: flex; align-items: baseline;
+      justify-content: space-between; background: #faf8f3;
     }
     .footer .label {
-      font-size: 0.68rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--muted);
+      font-size: 0.67rem; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--muted);
     }
     .total {
       font-family: 'Playfair Display', serif;
-      font-size: 2rem;
-      color: #ccc0b0;
-      letter-spacing: -1px;
-      transition: color 0.3s;
+      font-size: 2rem; color: #ccc0b0;
+      letter-spacing: -1px; transition: color 0.3s;
     }
     .total.has-total { color: var(--accent); }
-    .total-count {
-      font-size: 0.68rem;
-      color: var(--muted);
-      margin-top: 3px;
-      letter-spacing: 0.05em;
-    }
+    .total-count { font-size: 0.67rem; color: var(--muted); margin-top: 3px; }
     body.planning .footer { display: none; }
+
+    /* ══ REPORT OVERLAY ══ */
+    .overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(30,20,10,0.45);
+      z-index: 100;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 40px 16px 60px;
+      overflow-y: auto;
+    }
+    .overlay.open { display: flex; }
+
+    .report-card {
+      background: var(--paper);
+      border-radius: 2px;
+      width: 100%; max-width: 560px;
+      box-shadow: 0 2px 0 #c9b99a, 0 12px 48px rgba(30,20,10,0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    .report-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0; width: 38px;
+      background: repeating-linear-gradient(180deg, transparent, transparent 28px, #e8ddd0 28px, #e8ddd0 29px);
+      border-right: 2px solid var(--line);
+      z-index: 1;
+    }
+
+    .report-header {
+      padding: 22px 20px 16px 60px;
+      border-bottom: 2px solid var(--line);
+      display: flex; align-items: flex-end;
+      justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .report-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem; color: var(--ink);
+    }
+    .report-tabs {
+      display: flex; border: 2px solid var(--line);
+      border-radius: 2px; overflow: hidden;
+    }
+    .report-tab {
+      background: none; border: none;
+      padding: 5px 14px; font-family: 'DM Mono', monospace;
+      font-size: 0.67rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--muted); cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .report-tab + .report-tab { border-left: 2px solid var(--line); }
+    .report-tab.active { background: var(--ink); color: #fff; }
+
+    .report-body { padding: 0 20px 28px 60px; }
+
+    .report-period {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 0; border-bottom: 1px solid var(--line);
+    }
+    .period-nav {
+      background: none; border: none; font-size: 1.1rem;
+      color: var(--muted); cursor: pointer; padding: 2px 6px;
+      transition: color 0.15s; line-height: 1;
+    }
+    .period-nav:hover { color: var(--ink); }
+    .period-nav:disabled { opacity: 0.25; cursor: default; }
+    .period-label {
+      flex: 1; font-size: 0.8rem; color: var(--ink);
+      text-align: center; letter-spacing: 0.04em;
+    }
+
+    .trip-block { border-bottom: 1px solid var(--line); padding: 14px 0 10px; }
+    .trip-block-header {
+      display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;
+    }
+    .trip-date { font-size: 0.71rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+    .trip-total { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--accent); }
+
+    .trip-item-row {
+      display: flex; justify-content: space-between;
+      font-size: 0.78rem; color: var(--ink); padding: 2px 0;
+    }
+    .ti-name { color: var(--ink); }
+    .ti-detail { color: var(--muted); white-space: nowrap; margin-left: 12px; }
+    .trip-item-row.unchecked .ti-name { color: #bbb0a0; text-decoration: line-through; }
+    .trip-item-row.unchecked .ti-detail { color: #ccc0b0; }
+
+    .report-summary {
+      margin-top: 18px; padding: 14px 16px;
+      background: #faf8f3; border: 1.5px solid var(--line); border-radius: 2px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .sum-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+    .sum-val { font-family: 'Playfair Display', serif; font-size: 1.7rem; color: var(--accent); }
+
+    .report-empty {
+      padding: 32px 0; text-align: center;
+      font-size: 0.75rem; color: var(--muted); opacity: 0.7;
+    }
   </style>
 </head>
 <body class="planning">
 
+<!-- ══ MAIN CARD ══ -->
 <div class="card">
+
   <div class="header">
-    <h1>Shopping List</h1>
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="btnPlan">✏️ Planning</button>
-      <button class="mode-btn" id="btnShop">🛒 At store</button>
+    <div class="header-left">
+      <h1>Shopping List</h1>
+      <div class="date-label" id="todayLabel"></div>
     </div>
+    <div class="header-right">
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="btnPlan">✏️ Plan</button>
+        <button class="mode-btn" id="btnShop">🛒 Store</button>
+      </div>
+      <button class="icon-btn" id="btnHistory">📋 History</button>
+      <button class="icon-btn" id="btnReport">📊 Report</button>
+    </div>
+  </div>
+
+  <div class="history-bar" id="historyBar">
+    <select id="dateSelect"></select>
+    <button class="icon-btn" id="btnToday">Today</button>
   </div>
 
   <div class="add-row">
@@ -367,7 +433,7 @@
   <div class="mode-hint">Enter unit price, adjust qty, then check off.</div>
 
   <ul class="list" id="list"></ul>
-  <p class="empty-state" id="emptyState" style="display:block">Your list is empty — add items above!</p>
+  <p class="empty-state" id="emptyState">Your list is empty — add items above!</p>
 
   <div class="footer">
     <div>
@@ -378,161 +444,331 @@
   </div>
 </div>
 
+<!-- ══ REPORT OVERLAY ══ -->
+<div class="overlay" id="overlay">
+  <div class="report-card">
+    <div class="report-header">
+      <h2>Reports</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="report-tabs">
+          <button class="report-tab active" id="tabWeek">Weekly</button>
+          <button class="report-tab" id="tabMonth">Monthly</button>
+        </div>
+        <button class="icon-btn" id="btnCloseReport">✕ Close</button>
+      </div>
+    </div>
+
+    <div class="report-body">
+      <div class="report-period">
+        <button class="period-nav" id="periodPrev">‹</button>
+        <span class="period-label" id="periodLabel"></span>
+        <button class="period-nav" id="periodNext">›</button>
+      </div>
+      <div id="reportTrips"></div>
+      <div class="report-summary" id="reportSummary" style="display:none">
+        <div class="sum-label">Period total</div>
+        <div class="sum-val" id="reportTotal"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-  const listEl     = document.getElementById('list');
-  const emptyState = document.getElementById('emptyState');
-  const nameInput  = document.getElementById('itemName');
-  const addBtn     = document.getElementById('addBtn');
-  const totalEl    = document.getElementById('total');
-  const countEl    = document.getElementById('totalCount');
-  const btnPlan    = document.getElementById('btnPlan');
-  const btnShop    = document.getElementById('btnShop');
+// ══ STORAGE ══
+const STORE_KEY = 'shoppingLists_v1';
+function loadAll() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
+}
+function saveAll(data) { localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function loadList(key) { return loadAll()[key] || []; }
+function saveList(key, arr) { const all = loadAll(); all[key] = arr; saveAll(all); }
+function allDateKeys() { return Object.keys(loadAll()).sort().reverse(); }
 
-  let items = [];
+// ══ STATE ══
+let currentDate = todayKey();
+let items = loadList(currentDate);
+let mode = 'planning';
+let reportPeriod = 'week';
+let reportOffset = 0;
 
-  btnPlan.addEventListener('click', () => setMode('planning'));
-  btnShop.addEventListener('click', () => setMode('shopping'));
+// ══ ELEMENTS ══
+const listEl      = document.getElementById('list');
+const emptyState  = document.getElementById('emptyState');
+const nameInput   = document.getElementById('itemName');
+const addBtn      = document.getElementById('addBtn');
+const totalEl     = document.getElementById('total');
+const countEl     = document.getElementById('totalCount');
+const btnPlan     = document.getElementById('btnPlan');
+const btnShop     = document.getElementById('btnShop');
+const btnHistory  = document.getElementById('btnHistory');
+const btnReport   = document.getElementById('btnReport');
+const historyBar  = document.getElementById('historyBar');
+const dateSelect  = document.getElementById('dateSelect');
+const btnToday    = document.getElementById('btnToday');
+const todayLabel  = document.getElementById('todayLabel');
+const overlay     = document.getElementById('overlay');
+const btnClose    = document.getElementById('btnCloseReport');
+const tabWeek     = document.getElementById('tabWeek');
+const tabMonth    = document.getElementById('tabMonth');
+const periodPrev  = document.getElementById('periodPrev');
+const periodNext  = document.getElementById('periodNext');
+const periodLabel = document.getElementById('periodLabel');
+const reportTrips = document.getElementById('reportTrips');
+const reportSumEl = document.getElementById('reportSummary');
+const reportTotal = document.getElementById('reportTotal');
 
-  function setMode(m) {
-    document.body.className = m;
-    btnPlan.classList.toggle('active', m === 'planning');
-    btnShop.classList.toggle('active', m === 'shopping');
-    if (m === 'planning') nameInput.focus();
+// ══ MODE ══
+btnPlan.addEventListener('click', () => setMode('planning'));
+btnShop.addEventListener('click', () => setMode('shopping'));
+function setMode(m) {
+  mode = m;
+  document.body.className = m;
+  btnPlan.classList.toggle('active', m === 'planning');
+  btnShop.classList.toggle('active', m === 'shopping');
+  if (m === 'planning') nameInput.focus();
+}
+
+// ══ HISTORY ══
+btnHistory.addEventListener('click', () => {
+  const open = !historyBar.classList.contains('open');
+  historyBar.classList.toggle('open', open);
+  btnHistory.classList.toggle('on', open);
+  if (open) populateDateSelect();
+});
+btnToday.addEventListener('click', () => {
+  currentDate = todayKey();
+  items = loadList(currentDate);
+  updateTodayLabel();
+  render();
+});
+dateSelect.addEventListener('change', () => {
+  currentDate = dateSelect.value;
+  items = loadList(currentDate);
+  updateTodayLabel();
+  render();
+});
+
+function populateDateSelect() {
+  const keys = allDateKeys();
+  if (!keys.includes(todayKey())) keys.unshift(todayKey());
+  dateSelect.innerHTML = keys.map(k =>
+    `<option value="${k}" ${k === currentDate ? 'selected' : ''}>${formatDateLabel(k)}</option>`
+  ).join('');
+}
+
+function formatDateLabel(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  const date = new Date(y, m-1, d);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((date - today) / 86400000);
+  const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  if (diff === 0) return `Today — ${dateStr}`;
+  if (diff === -1) return `Yesterday — ${dateStr}`;
+  return dateStr;
+}
+
+function updateTodayLabel() {
+  todayLabel.textContent = formatDateLabel(currentDate);
+}
+
+// ══ LIST ACTIONS ══
+function addItem() {
+  const name = nameInput.value.trim();
+  if (!name) { nameInput.focus(); return; }
+  items.push({ id: Date.now(), name, price: '', qty: 1, checked: false });
+  nameInput.value = ''; nameInput.focus();
+  persist(); render();
+}
+addBtn.addEventListener('click', addItem);
+nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addItem(); } });
+
+function removeItem(id) { items = items.filter(i => i.id !== id); persist(); render(); }
+function checkItem(id) {
+  const item = items.find(i => i.id === id);
+  if (item) { item.checked = !item.checked; persist(); render(); }
+}
+function changeQty(id, delta) {
+  const item = items.find(i => i.id === id);
+  if (item) { item.qty = Math.max(1, item.qty + delta); persist(); render(); }
+}
+function setPrice(id, val) {
+  const item = items.find(i => i.id === id);
+  if (item) { item.price = val; persist(); updateTotal(); }
+}
+function persist() { saveList(currentDate, items); }
+
+function calcSub(item) {
+  const p = parseFloat(item.price);
+  return (!item.price || isNaN(p)) ? null : p * item.qty;
+}
+
+// ══ RENDER ══
+function render() {
+  listEl.innerHTML = '';
+  emptyState.style.display = items.length === 0 ? 'block' : 'none';
+  items.forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'item' + (item.checked ? ' checked' : '');
+    const sub = calcSub(item);
+    const subText  = sub !== null ? '$' + sub.toFixed(2) : '—';
+    const subClass = sub !== null ? 'subtotal' : 'subtotal empty';
+    li.innerHTML = `
+      <label class="cb-label">
+        <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+          <path d="M1 5l3.5 3.5L11 1" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </label>
+      <span class="item-name">${esc(item.name)}</span>
+      <div class="qty-stepper standalone">
+        <button class="qty-btn btn-minus">−</button>
+        <span class="qty-val">${item.qty}</span>
+        <button class="qty-btn btn-plus">+</button>
+      </div>
+      <div class="shop-controls">
+        <div class="price-wrap">
+          <span class="price-symbol">$</span>
+          <input class="price-input" type="number" min="0" step="0.01" placeholder="unit $" value="${item.price}"/>
+        </div>
+        <div class="qty-stepper">
+          <button class="qty-btn btn-minus">−</button>
+          <span class="qty-val">${item.qty}</span>
+          <button class="qty-btn btn-plus">+</button>
+        </div>
+        <span class="${subClass}">${subText}</span>
+      </div>
+      <button class="btn-remove">✕</button>
+    `;
+    li.querySelector('.cb-label').addEventListener('click', () => checkItem(item.id));
+    li.querySelectorAll('.btn-minus').forEach(b => b.addEventListener('click', () => changeQty(item.id, -1)));
+    li.querySelectorAll('.btn-plus').forEach(b => b.addEventListener('click', () => changeQty(item.id, +1)));
+    const pi = li.querySelector('.price-input');
+    if (pi) pi.addEventListener('input', () => setPrice(item.id, pi.value));
+    li.querySelector('.btn-remove').addEventListener('click', () => removeItem(item.id));
+    listEl.appendChild(li);
+  });
+  updateTotal();
+}
+
+function updateTotal() {
+  const checked = items.filter(i => i.checked);
+  const sum = checked.reduce((a, i) => a + (calcSub(i) || 0), 0);
+  totalEl.textContent = '$' + sum.toFixed(2);
+  totalEl.className   = 'total' + (sum > 0 ? ' has-total' : '');
+  countEl.textContent = `${checked.length} of ${items.length} item${items.length !== 1 ? 's' : ''}`;
+}
+
+// ══ REPORT ══
+btnReport.addEventListener('click', () => {
+  reportOffset = 0;
+  overlay.classList.add('open');
+  renderReport();
+});
+btnClose.addEventListener('click', () => overlay.classList.remove('open'));
+overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+tabWeek.addEventListener('click', () => {
+  reportPeriod = 'week'; reportOffset = 0;
+  tabWeek.classList.add('active'); tabMonth.classList.remove('active');
+  renderReport();
+});
+tabMonth.addEventListener('click', () => {
+  reportPeriod = 'month'; reportOffset = 0;
+  tabMonth.classList.add('active'); tabWeek.classList.remove('active');
+  renderReport();
+});
+periodPrev.addEventListener('click', () => { reportOffset--; renderReport(); });
+periodNext.addEventListener('click', () => { reportOffset++; renderReport(); });
+
+function getPeriodRange() {
+  const now = new Date();
+  if (reportPeriod === 'week') {
+    const dow = (now.getDay() + 6) % 7;
+    const mon = new Date(now); mon.setDate(now.getDate() - dow + reportOffset * 7); mon.setHours(0,0,0,0);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    return { start: mon, end: sun };
+  } else {
+    const y = now.getFullYear(); const m = now.getMonth() + reportOffset;
+    return { start: new Date(y, m, 1), end: new Date(y, m + 1, 0) };
+  }
+}
+
+function keyInRange(key, start, end) {
+  const [y, m, d] = key.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  return dt >= start && dt <= end;
+}
+
+function renderReport() {
+  const { start, end } = getPeriodRange();
+
+  if (reportPeriod === 'week') {
+    const s = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const e = end.toLocaleDateString('en-US',   { month: 'short', day: 'numeric', year: 'numeric' });
+    periodLabel.textContent = `${s} – ${e}`;
+  } else {
+    periodLabel.textContent = start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }
 
-  function addItem() {
-    const name = nameInput.value.trim();
-    if (!name) { nameInput.focus(); return; }
-    items.push({ id: Date.now(), name, price: '', qty: 1, checked: false });
-    nameInput.value = '';
-    nameInput.focus();
-    render();
+  periodNext.disabled = reportOffset >= 0;
+
+  const all  = loadAll();
+  const keys = Object.keys(all).filter(k => keyInRange(k, start, end) && all[k].length > 0).sort();
+
+  reportTrips.innerHTML = '';
+  if (keys.length === 0) {
+    reportTrips.innerHTML = '<div class="report-empty">No shopping trips in this period.</div>';
+    reportSumEl.style.display = 'none';
+    return;
   }
 
-  addBtn.addEventListener('click', addItem);
-  nameInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); addItem(); }
+  let periodSum = 0;
+  keys.forEach(k => {
+    const tripItems = all[k];
+    const tripTotal = tripItems.filter(i => i.checked).reduce((a, i) => {
+      const p = parseFloat(i.price); return a + (isNaN(p) ? 0 : p * i.qty);
+    }, 0);
+    periodSum += tripTotal;
+
+    const [y, m, d] = k.split('-').map(Number);
+    const dateStr = new Date(y, m-1, d).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+    const block = document.createElement('div');
+    block.className = 'trip-block';
+    block.innerHTML = `
+      <div class="trip-block-header">
+        <span class="trip-date">${dateStr}</span>
+        <span class="trip-total">$${tripTotal.toFixed(2)}</span>
+      </div>
+      ${tripItems.map(i => {
+        const sub = calcSub(i);
+        const detail = sub !== null
+          ? (i.qty > 1 ? `${i.qty} × $${parseFloat(i.price).toFixed(2)} = $${sub.toFixed(2)}` : `$${sub.toFixed(2)}`)
+          : '—';
+        return `<div class="trip-item-row ${i.checked ? '' : 'unchecked'}">
+          <span class="ti-name">${esc(i.name)}</span>
+          <span class="ti-detail">${detail}</span>
+        </div>`;
+      }).join('')}
+    `;
+    reportTrips.appendChild(block);
   });
 
-  function removeItem(id) {
-    items = items.filter(i => i.id !== id);
-    render();
-  }
+  reportSumEl.style.display = 'flex';
+  reportTotal.textContent = '$' + periodSum.toFixed(2);
+}
 
-  function checkItem(id) {
-    const item = items.find(i => i.id === id);
-    if (item && !item.checked) { item.checked = true; render(); }
-  }
+// ══ UTILS ══
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
-  function changeQty(id, delta) {
-    const item = items.find(i => i.id === id);
-    if (item) {
-      item.qty = Math.max(1, item.qty + delta);
-      render();
-    }
-  }
-
-  function setPrice(id, val) {
-    const item = items.find(i => i.id === id);
-    if (item) { item.price = val; updateTotal(); }
-  }
-
-  function calcSubtotal(item) {
-    const p = parseFloat(item.price);
-    if (!item.price || isNaN(p)) return null;
-    return p * item.qty;
-  }
-
-  function render() {
-    listEl.innerHTML = '';
-    emptyState.style.display = items.length === 0 ? 'block' : 'none';
-
-    items.forEach(item => {
-      const li = document.createElement('li');
-      li.className = 'item' + (item.checked ? ' checked' : '');
-
-      const sub = calcSubtotal(item);
-      const subText = sub !== null
-        ? '$' + sub.toFixed(2)
-        : '—';
-      const subClass = sub !== null ? 'subtotal' : 'subtotal empty';
-
-      li.innerHTML = `
-        <label class="cb-label">
-          <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-            <path d="M1 5l3.5 3.5L11 1" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </label>
-        <span class="item-name">${escHtml(item.name)}</span>
-
-        <!-- Planning: standalone qty stepper -->
-        <div class="qty-stepper standalone">
-          <button class="qty-btn btn-minus" title="Less">−</button>
-          <span class="qty-val">${item.qty}</span>
-          <button class="qty-btn btn-plus" title="More">+</button>
-        </div>
-
-        <!-- Shopping: price + qty + subtotal -->
-        <div class="shop-controls">
-          <div class="price-wrap">
-            <span class="price-symbol">$</span>
-            <input
-              class="price-input"
-              type="number"
-              min="0" step="0.01"
-              placeholder="unit $"
-              value="${item.price}"
-              ${item.checked ? 'disabled' : ''}
-            />
-          </div>
-          <div class="qty-stepper">
-            <button class="qty-btn btn-minus" title="Less">−</button>
-            <span class="qty-val">${item.qty}</span>
-            <button class="qty-btn btn-plus" title="More">+</button>
-          </div>
-          <span class="${subClass}">${subText}</span>
-        </div>
-
-        <button class="btn-remove" title="Remove">✕</button>
-      `;
-
-      // Checkbox
-      li.querySelector('.cb-label').addEventListener('click', () => checkItem(item.id));
-
-      // Qty buttons — both standalone and shop-controls steppers
-      li.querySelectorAll('.btn-minus').forEach(btn =>
-        btn.addEventListener('click', () => changeQty(item.id, -1))
-      );
-      li.querySelectorAll('.btn-plus').forEach(btn =>
-        btn.addEventListener('click', () => changeQty(item.id, +1))
-      );
-
-      // Price
-      const pi = li.querySelector('.price-input');
-      if (pi) pi.addEventListener('input', () => setPrice(item.id, pi.value));
-
-      // Remove
-      li.querySelector('.btn-remove').addEventListener('click', () => removeItem(item.id));
-
-      listEl.appendChild(li);
-    });
-
-    updateTotal();
-  }
-
-  function updateTotal() {
-    const checked = items.filter(i => i.checked);
-    const sum = checked.reduce((acc, i) => acc + (calcSubtotal(i) || 0), 0);
-    totalEl.textContent = '$' + sum.toFixed(2);
-    totalEl.className   = 'total' + (sum > 0 ? ' has-total' : '');
-    countEl.textContent = `${checked.length} of ${items.length} item${items.length !== 1 ? 's' : ''}`;
-  }
-
-  function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  render();
+// ══ INIT ══
+updateTodayLabel();
+render();
 </script>
 </body>
 </html>
