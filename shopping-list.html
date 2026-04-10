@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shopping List</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f0e8;
+      --paper: #fffef9;
+      --ink: #1a1a1a;
+      --muted: #7a7060;
+      --accent: #c94f1e;
+      --accent-light: #f5ddd5;
+      --line: #e0d8c8;
+      --check: #2d6a3f;
+      --check-bg: #e8f5ec;
+      --shadow: rgba(60,40,10,0.10);
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 16px 80px;
+      background-image:
+        radial-gradient(ellipse at 80% 10%, #e8dcc8 0%, transparent 60%),
+        radial-gradient(ellipse at 10% 90%, #ddd0bc 0%, transparent 60%);
+    }
+
+    .card {
+      background: var(--paper);
+      border-radius: 2px;
+      width: 100%;
+      max-width: 540px;
+      box-shadow:
+        0 2px 0 #c9b99a,
+        0 8px 32px var(--shadow),
+        0 1px 2px rgba(0,0,0,0.06);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 38px;
+      background: repeating-linear-gradient(
+        180deg, transparent, transparent 28px, #e8ddd0 28px, #e8ddd0 29px
+      );
+      border-right: 2px solid var(--line);
+      z-index: 1;
+    }
+
+    /* HEADER */
+    .header {
+      padding: 28px 20px 20px 60px;
+      border-bottom: 2px solid var(--line);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.9rem;
+      color: var(--ink);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    .mode-toggle {
+      display: flex;
+      border: 2px solid var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .mode-btn {
+      background: none;
+      border: none;
+      padding: 6px 11px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .mode-btn + .mode-btn { border-left: 2px solid var(--line); }
+    .mode-btn.active { background: var(--ink); color: #fff; }
+
+    /* ADD ROW */
+    .add-row {
+      display: flex;
+      gap: 8px;
+      padding: 16px 20px 16px 60px;
+      border-bottom: 2px solid var(--line);
+      background: #faf8f3;
+    }
+    .add-row input[type="text"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid var(--line);
+      padding: 6px 4px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .add-row input[type="text"]::placeholder { color: #bbb0a0; }
+    .add-row input[type="text"]:focus { border-color: var(--accent); }
+    .btn-add {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 2px;
+      padding: 0 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 1.3rem;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      line-height: 1;
+    }
+    .btn-add:hover { background: #a83c10; }
+    .btn-add:active { transform: scale(0.95); }
+
+    /* HINT */
+    .mode-hint {
+      padding: 9px 20px 9px 60px;
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+      background: #faf8f3;
+    }
+    body.planning .mode-hint { display: none; }
+
+    /* LIST */
+    .list { list-style: none; min-height: 60px; }
+    .empty-state {
+      padding: 40px 60px 32px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-align: center;
+      opacity: 0.7;
+    }
+
+    /* ITEM — planning layout */
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 16px 13px 60px;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.18s;
+      animation: slideIn 0.22s cubic-bezier(.22,1,.36,1);
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .item:hover { background: #faf7f0; }
+    .item.checked { background: var(--check-bg); }
+
+    /* Checkbox dot */
+    .cb-label {
+      width: 22px; height: 22px;
+      border: 2px solid var(--line);
+      border-radius: 2px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .item.checked .cb-label { background: var(--check); border-color: var(--check); }
+    .cb-label svg { display: none; }
+    .item.checked .cb-label svg { display: block; }
+    body.planning .cb-label { background: #f0ece4; border-color: #ddd8cc; }
+    body.shopping .cb-label { cursor: pointer; }
+
+    .item-name {
+      flex: 1;
+      font-size: 0.88rem;
+      color: var(--ink);
+      word-break: break-word;
+    }
+    .item.checked .item-name {
+      color: var(--muted);
+      text-decoration: line-through;
+      text-decoration-color: var(--check);
+    }
+
+    /* ── PLANNING: qty stepper on the right ── */
+    .qty-stepper {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border: 1.5px solid var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .qty-btn {
+      background: none;
+      border: none;
+      width: 28px; height: 28px;
+      font-size: 1rem;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.12s, color 0.12s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .qty-btn:hover { background: var(--accent-light); color: var(--accent); }
+    .qty-val {
+      width: 28px;
+      text-align: center;
+      font-size: 0.82rem;
+      color: var(--ink);
+      border-left: 1.5px solid var(--line);
+      border-right: 1.5px solid var(--line);
+      padding: 4px 0;
+      font-variant-numeric: tabular-nums;
+      user-select: none;
+    }
+
+    /* ── SHOPPING: price + qty + subtotal ── */
+    .shop-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* unit price input */
+    .price-wrap {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .price-symbol { color: var(--muted); font-size: 0.8rem; flex-shrink: 0; }
+    .price-input {
+      width: 60px;
+      background: transparent;
+      border: none;
+      border-bottom: 1.5px solid var(--line);
+      padding: 3px 2px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--ink);
+      text-align: right;
+      outline: none;
+      transition: border-color 0.2s;
+      -moz-appearance: textfield;
+    }
+    .price-input::-webkit-inner-spin-button,
+    .price-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+    .price-input:focus { border-color: var(--accent); }
+    .price-input::placeholder { color: #ccc0b0; }
+    .item.checked .price-input { color: var(--check); border-color: transparent; pointer-events: none; font-weight: 500; }
+    .item.checked .price-symbol { color: var(--check); }
+
+    /* qty stepper in shopping mode (slightly smaller) */
+    .shop-controls .qty-stepper {
+      border-color: var(--line);
+    }
+    .item.checked .qty-stepper {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* subtotal */
+    .subtotal {
+      min-width: 58px;
+      text-align: right;
+      font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+    .item.checked .subtotal { color: var(--check); font-weight: 500; }
+    .subtotal.empty { color: #ccc0b0; font-style: italic; font-size: 0.72rem; }
+
+    /* planning: show qty-stepper, hide shop-controls */
+    body.planning .shop-controls { display: none; }
+    body.planning .qty-stepper  { display: flex; }
+
+    /* shopping: show shop-controls (which contains its own stepper), hide standalone qty-stepper */
+    body.shopping .qty-stepper.standalone { display: none; }
+    body.shopping .shop-controls { display: flex; }
+
+    /* remove button */
+    .btn-remove {
+      background: none;
+      border: none;
+      color: #ccc0b0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      padding: 3px 5px;
+      border-radius: 2px;
+      line-height: 1;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-remove:hover { color: var(--accent); background: var(--accent-light); }
+    body.shopping .btn-remove { display: none; }
+
+    /* FOOTER */
+    .footer {
+      padding: 18px 20px 22px 60px;
+      border-top: 2px solid var(--ink);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      background: #faf8f3;
+    }
+    .footer .label {
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .total {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      color: #ccc0b0;
+      letter-spacing: -1px;
+      transition: color 0.3s;
+    }
+    .total.has-total { color: var(--accent); }
+    .total-count {
+      font-size: 0.68rem;
+      color: var(--muted);
+      margin-top: 3px;
+      letter-spacing: 0.05em;
+    }
+    body.planning .footer { display: none; }
+  </style>
+</head>
+<body class="planning">
+
+<div class="card">
+  <div class="header">
+    <h1>Shopping List</h1>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btnPlan">✏️ Planning</button>
+      <button class="mode-btn" id="btnShop">🛒 At store</button>
+    </div>
+  </div>
+
+  <div class="add-row">
+    <input type="text" id="itemName" placeholder="Add an item…" maxlength="60"/>
+    <button class="btn-add" id="addBtn">+</button>
+  </div>
+
+  <div class="mode-hint">Enter unit price, adjust qty, then check off.</div>
+
+  <ul class="list" id="list"></ul>
+  <p class="empty-state" id="emptyState" style="display:block">Your list is empty — add items above!</p>
+
+  <div class="footer">
+    <div>
+      <div class="label">Checked total</div>
+      <div class="total-count" id="totalCount">0 of 0 items</div>
+    </div>
+    <div class="total" id="total">$0.00</div>
+  </div>
+</div>
+
+<script>
+  const listEl     = document.getElementById('list');
+  const emptyState = document.getElementById('emptyState');
+  const nameInput  = document.getElementById('itemName');
+  const addBtn     = document.getElementById('addBtn');
+  const totalEl    = document.getElementById('total');
+  const countEl    = document.getElementById('totalCount');
+  const btnPlan    = document.getElementById('btnPlan');
+  const btnShop    = document.getElementById('btnShop');
+
+  let items = [];
+
+  btnPlan.addEventListener('click', () => setMode('planning'));
+  btnShop.addEventListener('click', () => setMode('shopping'));
+
+  function setMode(m) {
+    document.body.className = m;
+    btnPlan.classList.toggle('active', m === 'planning');
+    btnShop.classList.toggle('active', m === 'shopping');
+    if (m === 'planning') nameInput.focus();
+  }
+
+  function addItem() {
+    const name = nameInput.value.trim();
+    if (!name) { nameInput.focus(); return; }
+    items.push({ id: Date.now(), name, price: '', qty: 1, checked: false });
+    nameInput.value = '';
+    nameInput.focus();
+    render();
+  }
+
+  addBtn.addEventListener('click', addItem);
+  nameInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); addItem(); }
+  });
+
+  function removeItem(id) {
+    items = items.filter(i => i.id !== id);
+    render();
+  }
+
+  function checkItem(id) {
+    const item = items.find(i => i.id === id);
+    if (item && !item.checked) { item.checked = true; render(); }
+  }
+
+  function changeQty(id, delta) {
+    const item = items.find(i => i.id === id);
+    if (item) {
+      item.qty = Math.max(1, item.qty + delta);
+      render();
+    }
+  }
+
+  function setPrice(id, val) {
+    const item = items.find(i => i.id === id);
+    if (item) { item.price = val; updateTotal(); }
+  }
+
+  function calcSubtotal(item) {
+    const p = parseFloat(item.price);
+    if (!item.price || isNaN(p)) return null;
+    return p * item.qty;
+  }
+
+  function render() {
+    listEl.innerHTML = '';
+    emptyState.style.display = items.length === 0 ? 'block' : 'none';
+
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'item' + (item.checked ? ' checked' : '');
+
+      const sub = calcSubtotal(item);
+      const subText = sub !== null
+        ? '$' + sub.toFixed(2)
+        : '—';
+      const subClass = sub !== null ? 'subtotal' : 'subtotal empty';
+
+      li.innerHTML = `
+        <label class="cb-label">
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+            <path d="M1 5l3.5 3.5L11 1" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </label>
+        <span class="item-name">${escHtml(item.name)}</span>
+
+        <!-- Planning: standalone qty stepper -->
+        <div class="qty-stepper standalone">
+          <button class="qty-btn btn-minus" title="Less">−</button>
+          <span class="qty-val">${item.qty}</span>
+          <button class="qty-btn btn-plus" title="More">+</button>
+        </div>
+
+        <!-- Shopping: price + qty + subtotal -->
+        <div class="shop-controls">
+          <div class="price-wrap">
+            <span class="price-symbol">$</span>
+            <input
+              class="price-input"
+              type="number"
+              min="0" step="0.01"
+              placeholder="unit $"
+              value="${item.price}"
+              ${item.checked ? 'disabled' : ''}
+            />
+          </div>
+          <div class="qty-stepper">
+            <button class="qty-btn btn-minus" title="Less">−</button>
+            <span class="qty-val">${item.qty}</span>
+            <button class="qty-btn btn-plus" title="More">+</button>
+          </div>
+          <span class="${subClass}">${subText}</span>
+        </div>
+
+        <button class="btn-remove" title="Remove">✕</button>
+      `;
+
+      // Checkbox
+      li.querySelector('.cb-label').addEventListener('click', () => checkItem(item.id));
+
+      // Qty buttons — both standalone and shop-controls steppers
+      li.querySelectorAll('.btn-minus').forEach(btn =>
+        btn.addEventListener('click', () => changeQty(item.id, -1))
+      );
+      li.querySelectorAll('.btn-plus').forEach(btn =>
+        btn.addEventListener('click', () => changeQty(item.id, +1))
+      );
+
+      // Price
+      const pi = li.querySelector('.price-input');
+      if (pi) pi.addEventListener('input', () => setPrice(item.id, pi.value));
+
+      // Remove
+      li.querySelector('.btn-remove').addEventListener('click', () => removeItem(item.id));
+
+      listEl.appendChild(li);
+    });
+
+    updateTotal();
+  }
+
+  function updateTotal() {
+    const checked = items.filter(i => i.checked);
+    const sum = checked.reduce((acc, i) => acc + (calcSubtotal(i) || 0), 0);
+    totalEl.textContent = '$' + sum.toFixed(2);
+    totalEl.className   = 'total' + (sum > 0 ? ' has-total' : '');
+    countEl.textContent = `${checked.length} of ${items.length} item${items.length !== 1 ? 's' : ''}`;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  render();
+</script>
+</body>
+</html>
