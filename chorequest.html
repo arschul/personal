@@ -542,7 +542,7 @@ const DEFAULT_DATA = {
 
 const KID_COLORS=['#f4c842','#ff6b6b','#6ba3ff','#c56bff'];
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],scoreHistory:[],scorePeriodStart:null};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],scoreHistory:[],scorePeriodStart:null,migrations:{}};
 
 function loadState(){
   try{
@@ -555,15 +555,25 @@ function loadState(){
       state.dishRotation=p.dishRotation||['Samuel','Lucca','Pedro','Bianca'];
       state.scoreHistory=p.scoreHistory||[];
       state.scorePeriodStart=p.scorePeriodStart||null;
+      state.migrations=p.migrations||{};
       const today=new Date().toDateString();
-      if(p.today===today&&p.assignments){state.assignments=p.assignments;state.today=today;}
+      if(p.today===today&&p.assignments){
+        state.assignments=p.assignments;state.today=today;
+        // Migration: give older saved tasks a unique _id (needed for swap matching)
+        let uid=1;
+        for(const gi in state.assignments){
+          for(const t of state.assignments[gi]){ if(t._id===undefined) t._id=uid++; }
+        }
+      }
 
-      // Migrate: ensure "Brush your teeth" exists as an everyone task in Bedroom
-      ensureBrushTeethTask();
-      // Migrate: fix points
-      migrateTaskPoints();
-      // Migrate: ensure Sweep the corridor exists in Kitchen
-      ensureSweepCorridorTask();
+      // One-time migrations: each runs only once, ever, then is flagged done.
+      // This way they no longer fight with tasks the user edits/removes later.
+      let migrated=false;
+      if(!state.migrations.brushTeeth){ ensureBrushTeethTask(); state.migrations.brushTeeth=true; migrated=true; }
+      if(!state.migrations.ptsFixed){ migrateTaskPoints(); state.migrations.ptsFixed=true; migrated=true; }
+      if(!state.migrations.sweepCorridor){ ensureSweepCorridorTask(); state.migrations.sweepCorridor=true; migrated=true; }
+      syncDishRotation();
+      if(migrated) saveState();
 
       return;
     }
@@ -574,6 +584,15 @@ function loadState(){
   state.dishRotation=['Samuel','Lucca','Pedro','Bianca'];
   state.scoreHistory=[];
   state.scorePeriodStart=null;
+  state.migrations={brushTeeth:true,ptsFixed:true,sweepCorridor:true};
+}
+
+// Keep dishRotation in sync with the current kids list: drop removed kids,
+// append any kid (e.g. newly added) who isn't in the rotation yet.
+function syncDishRotation(){
+  const names=state.kids.map(k=>k.name);
+  state.dishRotation=state.dishRotation.filter(n=>names.includes(n));
+  for(const n of names){ if(!state.dishRotation.includes(n)) state.dishRotation.push(n); }
 }
 
 function ensureBrushTeethTask(){
@@ -605,7 +624,8 @@ function saveState(){
   localStorage.setItem('chorequest_v3',JSON.stringify({
     kids:state.kids,rooms:state.rooms,assignments:state.assignments,
     today:state.today,fewerHistory:state.fewerHistory,dishRotation:state.dishRotation,
-    scoreHistory:state.scoreHistory,scorePeriodStart:state.scorePeriodStart
+    scoreHistory:state.scoreHistory,scorePeriodStart:state.scorePeriodStart,
+    migrations:state.migrations
   }));
 }
 
@@ -651,7 +671,9 @@ function calcPoints(){
 
 /* DISTRIBUTION */
 function distributeTasks(){
+  syncDishRotation();
   const activeKids=getActiveKids();
+  let uid=1;
 
   const starTasks=[], poolTasks=[];
   let dishTaskDef=null;
@@ -666,7 +688,7 @@ function distributeTasks(){
 
   const kidIdx=activeKids.map((_,i)=>state.kids.indexOf(activeKids[i]));
   const assignments={};
-  kidIdx.forEach(i=>{ assignments[i]=starTasks.map(t=>({...t})); });
+  kidIdx.forEach(i=>{ assignments[i]=starTasks.map(t=>({...t,_id:uid++})); });
 
   const kidPts={};
   kidIdx.forEach(i=>{ kidPts[i]=assignments[i].reduce((s,t)=>s+t.pts,0); });
@@ -679,7 +701,7 @@ function distributeTasks(){
     if(dishKidName){
       const dishGI=state.kids.findIndex(k=>k.name===dishKidName);
       if(dishGI!==-1){
-        assignments[dishGI].push({...dishTaskDef});
+        assignments[dishGI].push({...dishTaskDef,_id:uid++});
         kidPts[dishGI]+=dishTaskDef.pts;
       }
       state.dishRotation=state.dishRotation.filter(nm=>nm!==dishKidName);
@@ -701,7 +723,7 @@ function distributeTasks(){
     const minP=Math.min(...kidIdx.map(i=>kidPts[i]));
     const tied=kidIdx.filter(i=>kidPts[i]===minP);
     const pick=tied[Math.floor(Math.random()*tied.length)];
-    assignments[pick].push({...task});
+    assignments[pick].push({...task,_id:uid++});
     kidPts[pick]+=task.pts;
   }
 
@@ -991,17 +1013,17 @@ function renderSwapStep1(){
   const list=document.createElement('div');
   list.className='swap-task-list';
 
-  const selectedNames=new Set(swapState.selectedTasks.map(t=>t.name));
+  const selectedIds=new Set(swapState.selectedTasks.map(t=>t._id));
 
   tasks.forEach(task=>{
     const btn=document.createElement('button');
-    const isSelected=selectedNames.has(task.name);
+    const isSelected=selectedIds.has(task._id);
     btn.className='swap-task-btn'+(isSelected?' selected':'');
     const dl=task.pts===1?'easy':task.pts===2?'medium':'hard';
     btn.innerHTML=`<span class="diff-badge ${dl}">${task.pts}pt</span><span class="swap-task-name">${task.name}</span><span class="swap-task-room">${task.room}</span><span style="margin-left:auto;font-size:1.2rem">${isSelected?'☑':'☐'}</span>`;
     btn.addEventListener('click',()=>{
       if(isSelected){
-        swapState.selectedTasks=swapState.selectedTasks.filter(t=>t.name!==task.name);
+        swapState.selectedTasks=swapState.selectedTasks.filter(t=>t._id!==task._id);
       } else {
         swapState.selectedTasks.push(task);
       }
@@ -1068,8 +1090,8 @@ function renderSwapStep2(){
     body.appendChild(kidLbl);
 
     // Render as checkboxes; user selects tasks; we validate sum = offerPts
-    const taskStates={}; // name -> checked
-    available.forEach(t=>{taskStates[t.name]=false;});
+    const taskStates={}; // _id -> checked
+    available.forEach(t=>{taskStates[t._id]=false;});
 
     const bundleWrap=document.createElement('div');
     body.appendChild(bundleWrap);
@@ -1079,7 +1101,7 @@ function renderSwapStep2(){
     confirmBtn.disabled=true;
     confirmBtn.textContent=`Select ${offerPts}pt worth of tasks`;
     confirmBtn.addEventListener('click',()=>{
-      const chosen=available.filter(t=>taskStates[t.name]);
+      const chosen=available.filter(t=>taskStates[t._id]);
       swapState.targetGI=ogi;
       swapState.targetTasks=chosen;
       closeSwap();
@@ -1089,17 +1111,17 @@ function renderSwapStep2(){
 
     function rebuildBundle(){
       bundleWrap.innerHTML='';
-      const currentSum=available.filter(t=>taskStates[t.name]).reduce((s,t)=>s+t.pts,0);
+      const currentSum=available.filter(t=>taskStates[t._id]).reduce((s,t)=>s+t.pts,0);
       confirmBtn.disabled=(currentSum!==offerPts);
       confirmBtn.textContent=currentSum===offerPts?`✓ Swap for these ${offerPts}pt tasks`:`Selected ${currentSum}pt / need ${offerPts}pt`;
 
       available.forEach(task=>{
         const row=document.createElement('div');
-        row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:8px;margin-bottom:5px;cursor:pointer;border:2px solid '+(taskStates[task.name]?col:'var(--surface2)')+';transition:border-color 0.15s;';
+        row.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border-radius:8px;margin-bottom:5px;cursor:pointer;border:2px solid '+(taskStates[task._id]?col:'var(--surface2)')+';transition:border-color 0.15s;';
         const dl=task.pts===1?'easy':task.pts===2?'medium':'hard';
-        row.innerHTML=`<div class="swap-checkbox ${taskStates[task.name]?'checked':''}" style="${taskStates[task.name]?'background:'+col+';border-color:'+col+';':''}">${taskStates[task.name]?'✓':''}</div><span class="diff-badge ${dl}">${task.pts}pt</span><span style="flex:1;font-size:0.85rem;font-weight:800">${task.name}</span><span style="font-size:0.6rem;font-weight:900;text-transform:uppercase;color:var(--text-muted)">${task.room}</span>`;
+        row.innerHTML=`<div class="swap-checkbox ${taskStates[task._id]?'checked':''}" style="${taskStates[task._id]?'background:'+col+';border-color:'+col+';':''}">${taskStates[task._id]?'✓':''}</div><span class="diff-badge ${dl}">${task.pts}pt</span><span style="flex:1;font-size:0.85rem;font-weight:800">${task.name}</span><span style="font-size:0.6rem;font-weight:900;text-transform:uppercase;color:var(--text-muted)">${task.room}</span>`;
         row.addEventListener('click',()=>{
-          taskStates[task.name]=!taskStates[task.name];
+          taskStates[task._id]=!taskStates[task._id];
           rebuildBundle();
         });
         bundleWrap.appendChild(row);
@@ -1169,7 +1191,7 @@ function executeSwap(){
 
   // Remove i's tasks, add t's tasks
   for(const task of iGiveTasks){
-    const idx=state.assignments[iGI].findIndex(t=>t.name===task.name&&!t.done);
+    const idx=state.assignments[iGI].findIndex(t=>t._id===task._id);
     if(idx!==-1) state.assignments[iGI].splice(idx,1);
   }
   for(const task of tGiveTasks){
@@ -1178,7 +1200,7 @@ function executeSwap(){
 
   // Remove t's tasks, add i's tasks
   for(const task of tGiveTasks){
-    const idx=state.assignments[tGI].findIndex(t=>t.name===task.name&&!t.done);
+    const idx=state.assignments[tGI].findIndex(t=>t._id===task._id);
     if(idx!==-1) state.assignments[tGI].splice(idx,1);
   }
   for(const task of iGiveTasks){
@@ -1203,11 +1225,21 @@ document.getElementById('refuseSwapBtn').addEventListener('click',()=>{
 function moveDishUp(i){ if(i===0)return;[state.dishRotation[i-1],state.dishRotation[i]]=[state.dishRotation[i],state.dishRotation[i-1]];saveState();openSettings(); }
 function moveDishDown(i){ if(i===state.dishRotation.length-1)return;[state.dishRotation[i+1],state.dishRotation[i]]=[state.dishRotation[i],state.dishRotation[i+1]];saveState();openSettings(); }
 
-function toggleEvery(ri,ti,el){state.rooms[ri].tasks[ti].everyone=!state.rooms[ri].tasks[ti].everyone;el.classList.toggle('on',state.rooms[ri].tasks[ti].everyone);}
-function changePts(ri,ti,v){state.rooms[ri].tasks[ti].pts=parseInt(v);}
+function toggleEvery(ri,ti,el){state.rooms[ri].tasks[ti].everyone=!state.rooms[ri].tasks[ti].everyone;el.classList.toggle('on',state.rooms[ri].tasks[ti].everyone);saveState();}
+function changePts(ri,ti,v){state.rooms[ri].tasks[ti].pts=parseInt(v);saveState();}
 function removeTask(ri,ti){state.rooms[ri].tasks.splice(ti,1);openSettings();}
 function removeRoom(ri){if(confirm(`Remove room "${state.rooms[ri].name}"?`)){state.rooms.splice(ri,1);openSettings();}}
-function removeKid(i){if(confirm(`Remove ${state.kids[i].name}?`)){state.kids.splice(i,1);openSettings();}}
+function removeKid(i){
+  if(confirm(`Remove ${state.kids[i].name}?`)){
+    state.kids.splice(i,1);
+    // state.assignments is keyed by kid index, which just shifted for every
+    // kid after i — clear it so the next roll rebuilds cleanly instead of
+    // showing one kid's quests under another kid's card.
+    state.assignments=null;state.today=null;
+    syncDishRotation();
+    openSettings();
+  }
+}
 function addTask(ri){
   const n=document.getElementById(`nt-${ri}`).value.trim();
   const p=parseInt(document.getElementById(`np-${ri}`).value);
@@ -1797,6 +1829,7 @@ document.getElementById('settingsBtn').addEventListener('click',()=>{
 function renderSettings(){ openSettings(); }
 
 function openSettings(){
+  syncDishRotation();
   const ks=document.getElementById('kidsSettings');
   ks.innerHTML='';
   state.kids.forEach((kid,i)=>{
