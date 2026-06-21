@@ -158,6 +158,16 @@
   .pt-delta-pos{color:var(--sage);}
   .pt-delta-neg{color:var(--rust);}
   .pt-no-resp{color:var(--ink-faint);font-style:italic;}
+  .skill-pin-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+  .skill-pin-btn{
+    border:1.5px solid var(--rule);border-radius:20px;padding:5px 13px;
+    background:var(--card);color:var(--ink-soft);cursor:pointer;font-size:.78rem;font-weight:500;
+    font-family:inherit;
+  }
+  .skill-pin-btn:hover{border-color:var(--gold);color:var(--ink);}
+  .skill-pin-btn.active{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600;}
+  .skill-pin-btn.maxed:not(.active){opacity:.45;cursor:not-allowed;}
+  .pin-tag{display:inline-block;padding:1px 5px;border-radius:3px;font-size:.6rem;font-weight:700;letter-spacing:.03em;background:var(--gold-soft);color:#8a611f;margin-left:2px;vertical-align:middle;}
 
   /* ---------- Cards / lists ---------- */
   .card{background:var(--card);border:1px solid var(--rule-soft);border-radius:var(--radius);box-shadow:var(--shadow);}
@@ -655,12 +665,15 @@ function renderDashboard(){
 
   const todayHTML = todaysLessons.length ? todaysLessons.map(l=>{
     const s = getStudent(l.studentId);
+    const pinHTML = (s && s.pinnedSkills && s.pinnedSkills.length)
+      ? ' · ' + s.pinnedSkills.map(k=>{ const sk=SKILLS.find(x=>x.key===k); return sk?`<span class="pin-tag">${sk.label}</span>`:''; }).join(' ')
+      : '';
     return `
       <div class="today-row">
         <div class="time">${esc(fmtTime(l.time))}</div>
         <div class="who">
           <div class="name" data-action="open-student" data-id="${s?s.id:''}">${esc(s?s.name:'Unknown')}</div>
-          <div class="sub">${esc(s?s.cefr||'':'')} · ${l.duration||60} min ${l.status!=='scheduled' ? '· '+esc(l.status) : ''}</div>
+          <div class="sub">${esc(s?s.cefr||'':'')} · ${l.duration||60} min ${l.status!=='scheduled' ? '· '+esc(l.status) : ''}${pinHTML}</div>
         </div>
         ${l.status==='scheduled' ? `
         <div class="action-row">
@@ -814,7 +827,10 @@ function renderCalendar(){
     const dayLessons = state.lessons.filter(l=>l.date===dateStr).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     const chips = dayLessons.slice(0,4).map(l=>{
       const s = studentMap[l.studentId];
-      return `<div class="lesson-chip s-${l.status}" data-action="open-lesson" data-id="${l.id}">${esc(l.time||'')} ${esc(s?s.name.split(' ')[0]:'?')}</div>`;
+      const pins = (s && s.pinnedSkills && s.pinnedSkills.length)
+        ? s.pinnedSkills.map(k=>{ const sk=SKILLS.find(x=>x.key===k); return sk?`<span class="pin-tag">${sk.abbr}</span>`:''; }).join('')
+        : '';
+      return `<div class="lesson-chip s-${l.status}" data-action="open-lesson" data-id="${l.id}">${esc(l.time||'')} ${esc(s?s.name.split(' ')[0]:'?')}${pins}</div>`;
     }).join('');
     const more = dayLessons.length>4 ? `<div class="lesson-chip">+${dayLessons.length-4} more</div>` : '';
     return `<div class="cal-cell ${outside?'outside':''} ${isToday?'today':''} ${isSelected?'selected':''}" data-action="select-day" data-date="${dateStr}">
@@ -848,12 +864,15 @@ function renderAgenda(){
   const dayLessons = state.lessons.filter(l=>l.date===dateStr).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const rows = dayLessons.length ? dayLessons.map(l=>{
     const s = studentMap[l.studentId];
+    const pinHTML = (s && s.pinnedSkills && s.pinnedSkills.length)
+      ? ' · ' + s.pinnedSkills.map(k=>{ const sk=SKILLS.find(x=>x.key===k); return sk?`<span class="pin-tag">${sk.label}</span>`:''; }).join(' ')
+      : '';
     return `
       <div class="today-row">
         <div class="time">${esc(fmtTime(l.time))}</div>
         <div class="who">
           <div class="name" data-action="open-student" data-id="${s?s.id:''}">${esc(s?s.name:'Unknown')}</div>
-          <div class="sub">${l.duration||60} min · ${esc(l.status)}</div>
+          <div class="sub">${l.duration||60} min · ${esc(l.status)}${pinHTML}</div>
         </div>
         <div class="action-row">
           ${l.status==='scheduled' ? `
@@ -987,7 +1006,7 @@ function renderPlacementSection(studentId, studentName){
     const latestScores = latest.scores && latest.scores[lvl];
     const origScores = isRetest && original.scores && original.scores[lvl];
     if(!latestScores) return '';
-    const hasAny = latestScores.some(s => s && s.score !== null);
+    const hasAny = latestScores.some(s => s && (s.score !== null || s.unit || s.outcome));
     if(!hasAny) return '';
 
     const rows = latestScores.map((entry, i) => {
@@ -995,9 +1014,12 @@ function renderPlacementSection(studentId, studentName){
       const origEntry = origScores && origScores[i];
       const prevScore = (origEntry && origEntry.score !== null && origEntry.score !== undefined) ? origEntry.score : null;
       const curScore = (entry.score !== null && entry.score !== undefined) ? entry.score : null;
-
-      // Try to get unit/outcome from QB equivalent — store just score, so label via index note
       const qNum = i + 1;
+      const unit = entry.unit || (origEntry && origEntry.unit) || '';
+      const outcome = entry.outcome || (origEntry && origEntry.outcome) || '';
+      // Skip entirely if no data at all for this question
+      if(curScore === null && prevScore === null && !unit && !outcome) return '';
+
       let scoreHTML = '';
       if(curScore === null){
         scoreHTML = `<span class="pt-no-resp">No response</span>`;
@@ -1008,9 +1030,14 @@ function renderPlacementSection(studentId, studentName){
         const cls = delta > 0 ? 'pt-delta-pos' : 'pt-delta-neg';
         scoreHTML = `<span style="color:var(--ink-faint)">${prevScore}%</span> → <strong>${curScore}%</strong> <span class="${cls}">(${sign}${delta})</span>`;
       } else {
-        scoreHTML = `<strong>${curScore}%</strong>`;
+        scoreHTML = `<strong>${curScore !== null ? curScore+'%' : '—'}</strong>`;
       }
-      return `<div class="pt-q-row"><span class="pt-q-num">${qNum}</span><span class="pt-q-score">${scoreHTML}</span></div>`;
+      return `<div class="pt-q-row">
+        <span class="pt-q-num">${qNum}</span>
+        <span class="pt-q-unit" title="${esc(unit)}">${esc(unit)}</span>
+        <span class="pt-q-outcome">${esc(outcome)}</span>
+        <span class="pt-q-score">${scoreHTML}</span>
+      </div>`;
     }).filter(Boolean).join('');
 
     if(!rows) return '';
@@ -1046,7 +1073,7 @@ function openStudentPanel(id){
   const s = isNew ? {
     id: genId(), name:'', contactPhone:'', guardianName:'', guardianPhone:'', isMinor:false,
     cefr:'', pricingType:'perLesson', rate:'', packageSize:'', packagePrice:'',
-    status:'active', startDate: todayStr(), notes:'', recurring:null
+    status:'active', startDate: todayStr(), notes:'', recurring:null, pinnedSkills:[]
   } : getStudent(id);
   if(!s) return;
 
@@ -1129,6 +1156,15 @@ function openStudentPanel(id){
       <div class="section-label">Recurring schedule <span style="font-weight:400;text-transform:none;letter-spacing:0;">— add a row for each weekly slot</span></div>
       <div id="recurring-slots">${slotRowsHTML}</div>
       <button type="button" class="btn small ghost" data-action="add-recurring-slot" style="margin-bottom:16px;">+ Add a day</button>
+
+      <div class="section-label">Focus skills <span style="font-weight:400;text-transform:none;letter-spacing:0;">— up to 3, shown on calendar</span></div>
+      <div class="skill-pin-row" id="skill-pin-row">
+        ${SKILLS.map(sk=>{
+          const pinned = (s.pinnedSkills||[]).includes(sk.key);
+          const maxed = !pinned && (s.pinnedSkills||[]).length >= 3;
+          return `<button type="button" class="skill-pin-btn${pinned?' active':''}${maxed?' maxed':''}" data-action="toggle-skill-pin" data-student="${s.id}" data-skill="${sk.key}">${sk.label}</button>`;
+        }).join('')}
+      </div>
 
       <div class="field"><label>Notes</label><textarea name="notes">${esc(s.notes)}</textarea></div>
 
@@ -1373,6 +1409,29 @@ document.addEventListener('click', function(e){
     currentView = t.dataset.view; renderAll(); return;
   }
   if(action==='close-modal'){ closeOverlay(); return; }
+  if(action==='toggle-skill-pin'){
+    const s = getStudent(t.dataset.student);
+    if(!s) return;
+    s.pinnedSkills = s.pinnedSkills || [];
+    const skill = t.dataset.skill;
+    const idx = s.pinnedSkills.indexOf(skill);
+    if(idx >= 0){
+      s.pinnedSkills.splice(idx, 1);
+    } else {
+      if(s.pinnedSkills.length >= 3){ toast('Maximum 3 focus skills.'); return; }
+      s.pinnedSkills.push(skill);
+    }
+    saveState();
+    // Update buttons in-place without closing the panel
+    document.querySelectorAll('.skill-pin-btn').forEach(btn=>{
+      const pinned = s.pinnedSkills.includes(btn.dataset.skill);
+      const maxed = !pinned && s.pinnedSkills.length >= 3;
+      btn.classList.toggle('active', pinned);
+      btn.classList.toggle('maxed', maxed);
+    });
+    renderAll(); // refreshes calendar chips
+    return;
+  }
   if(action==='open-student'){ openStudentPanel(t.dataset.id || null); return; }
   if(action==='delete-student'){
     if(confirm('Delete this student? Their lesson and payment history will also be removed. This cannot be undone.')){
@@ -1569,6 +1628,7 @@ document.addEventListener('submit', function(e){
     s.packagePrice = fd.get('packagePrice') ? Number(fd.get('packagePrice')) : '';
     s.notes = fd.get('notes')||'';
     s.startDate = s.startDate || todayStr();
+    s.pinnedSkills = s.pinnedSkills || [];
 
     const slotDays = fd.getAll('slotDay');
     const slotTimes = fd.getAll('slotTime');
