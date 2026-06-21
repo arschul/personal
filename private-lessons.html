@@ -166,6 +166,14 @@
   .sp-remove{cursor:pointer;color:var(--ink-faint);font-size:.9rem;padding:0 3px;flex-shrink:0;}
   .sp-remove:hover{color:var(--rust);}
   .sp-empty{font-size:.8rem;color:var(--ink-faint);font-style:italic;}
+  .archived-banner{background:var(--paper-deep);border:1px solid var(--rule);border-radius:6px;padding:10px 14px;font-size:.82rem;color:var(--ink-soft);display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;}
+  .archived-banner strong{color:var(--ink);}
+  .archive-row{display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--rule-soft);cursor:pointer;}
+  .archive-row:last-child{border-bottom:none;}
+  .archive-row:hover td, .archive-row:hover{background:rgba(31,58,95,.03);}
+  .archive-row .who{flex:1;}
+  .archive-row .who .name{font-weight:600;}
+  .archive-row .who .sub{font-size:.76rem;color:var(--ink-faint);}
   .pt-delta-pos{color:var(--sage);}
   .pt-delta-neg{color:var(--rust);}
   .pt-no-resp{color:var(--ink-faint);font-style:italic;}
@@ -338,6 +346,7 @@
     <div class="nav-tab" data-action="nav" data-view="students">Students</div>
     <div class="nav-tab" data-action="nav" data-view="calendar">Calendar</div>
     <div class="nav-tab" data-action="nav" data-view="payments">Payments</div>
+    <div class="nav-tab" data-action="nav" data-view="archive">Archive</div>
   </div>
   <div class="sidebar-foot">
     <div class="foot-link" data-action="export-data">⤓ Export data</div>
@@ -352,6 +361,7 @@
   <div id="view-students" class="view"></div>
   <div id="view-calendar" class="view"></div>
   <div id="view-payments" class="view"></div>
+  <div id="view-archive" class="view"></div>
 
 </div>
 
@@ -658,6 +668,7 @@ function renderAll(){
   if(currentView==='students') renderStudents();
   if(currentView==='calendar') renderCalendar();
   if(currentView==='payments') renderPayments();
+  if(currentView==='archive') renderArchive();
   updateSidebarAlert();
 }
 
@@ -667,11 +678,43 @@ function updateSidebarAlert(){
 }
 
 /* =========================================================
+   RENDER: ARCHIVE
+   ========================================================= */
+function renderArchive(){
+  const list = state.students.filter(s => s.archived).sort((a,b)=>a.name.localeCompare(b.name));
+  const rows = list.length ? list.map(s=>{
+    const ledger = computeLedger(s.id);
+    const totalLessons = state.lessons.filter(l=>l.studentId===s.id && l.status==='completed').length;
+    return `
+      <tr class="student-row" data-action="open-student" data-id="${s.id}">
+        <td><span class="name">${esc(s.name)}</span></td>
+        <td><span class="badge cefr">${esc(s.cefr||'—')}</span></td>
+        <td style="color:var(--ink-faint);font-size:.83rem;">${totalLessons} lesson${totalLessons===1?'':'s'} held</td>
+        <td class="right">${fmtMoney(ledger.balance)}</td>
+      </tr>`;
+  }).join('') : '';
+
+  document.getElementById('view-archive').innerHTML = `
+    <div class="view-head">
+      <div><h1>Archive</h1><div class="meta">${list.length} student${list.length===1?'':'s'}</div></div>
+    </div>
+    ${list.length ? `
+    <table>
+      <thead><tr><th>Name</th><th>Level</th><th>History</th><th class="right">Balance</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>` : `<div class="empty">No archived students yet. Use the Archive button on a student to move them here.</div>`}
+  `;
+}
+
+/* =========================================================
    RENDER: DASHBOARD
    ========================================================= */
 function renderDashboard(){
   const todaysLessons = state.lessons
-    .filter(l => l.date===todayStr() && l.status!=='cancelled')
+    .filter(l => {
+      const s = getStudent(l.studentId);
+      return l.date===todayStr() && l.status!=='cancelled' && s && !s.archived;
+    })
     .sort((a,b)=> (a.time||'').localeCompare(b.time||''));
 
   const todayHTML = todaysLessons.length ? todaysLessons.map(l=>{
@@ -699,6 +742,7 @@ function renderDashboard(){
   }).join('') : `<div class="empty">No lessons today.</div>`;
 
   const owing = state.students
+    .filter(s => !s.archived)
     .map(s => ({ s, ledger: computeLedger(s.id) }))
     .filter(x => x.ledger.balance > 0.5 && x.s.status!=='inactive')
     .sort((a,b)=> (b.ledger.overdue - a.ledger.overdue) || (b.ledger.balance - a.ledger.balance));
@@ -717,13 +761,14 @@ function renderDashboard(){
   const thisWeekStart = weekStartOf(new Date());
   const thisWeekEnd = new Date(thisWeekStart); thisWeekEnd.setDate(thisWeekEnd.getDate()+6);
   const wkStartStr = toLocalDateStr(thisWeekStart), wkEndStr = toLocalDateStr(thisWeekEnd);
-  const weekLessons = state.lessons.filter(l => l.date>=wkStartStr && l.date<=wkEndStr);
+  const activeStudentIds = new Set(state.students.filter(s=>!s.archived).map(s=>s.id));
+  const weekLessons = state.lessons.filter(l => l.date>=wkStartStr && l.date<=wkEndStr && activeStudentIds.has(l.studentId));
   const completedThisWeek = weekLessons.filter(l=>l.status==='completed').length;
   const scheduledRemaining = weekLessons.filter(l=>l.status==='scheduled' && l.date>=todayStr()).length;
 
   const thisMonth = todayStr().slice(0,7);
   const receivedThisMonth = state.payments
-    .filter(p=>p.date.slice(0,7)===thisMonth)
+    .filter(p=>p.date.slice(0,7)===thisMonth && activeStudentIds.has(p.studentId))
     .reduce((s,p)=>s+(Number(p.amount)||0),0);
 
   document.getElementById('view-dashboard').innerHTML = `
@@ -760,7 +805,7 @@ function weekStartOf(date){
    RENDER: STUDENTS
    ========================================================= */
 function renderStudents(){
-  let list = state.students.slice();
+  let list = state.students.filter(s => !s.archived);
   if(studentFilter!=='all') list = list.filter(s=>s.status===studentFilter);
   if(studentSearch.trim()){
     const q = studentSearch.trim().toLowerCase();
@@ -838,7 +883,7 @@ function renderCalendar(){
     const outside = d.getMonth()!==month;
     const isToday = dateStr===todayStr();
     const isSelected = dateStr===calSelectedDate;
-    const dayLessons = state.lessons.filter(l=>l.date===dateStr).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    const dayLessons = state.lessons.filter(l=>l.date===dateStr && studentMap[l.studentId] && !studentMap[l.studentId].archived).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
     const chips = dayLessons.slice(0,4).map(l=>{
       const s = studentMap[l.studentId];
       const pins = (s && s.pinnedSkills && s.pinnedSkills.length)
@@ -878,7 +923,7 @@ function renderCalendar(){
 function renderAgenda(){
   const dateStr = calSelectedDate;
   const studentMap = {}; state.students.forEach(s=>studentMap[s.id]=s);
-  const dayLessons = state.lessons.filter(l=>l.date===dateStr).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const dayLessons = state.lessons.filter(l=>l.date===dateStr && studentMap[l.studentId] && !studentMap[l.studentId].archived).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
   const rows = dayLessons.length ? dayLessons.map(l=>{
     const s = studentMap[l.studentId];
     const pinHTML = (s && s.pinnedSkills && s.pinnedSkills.length)
@@ -919,7 +964,10 @@ function renderAgenda(){
    ========================================================= */
 function renderPayments(){
   const studentMap = {}; state.students.forEach(s=>studentMap[s.id]=s);
-  const list = state.payments.slice().sort((a,b)=> b.date.localeCompare(a.date));
+  const list = state.payments.filter(p=>{
+    const s = studentMap[p.studentId];
+    return !s || !s.archived;
+  }).sort((a,b)=> b.date.localeCompare(a.date));
   const total = list.reduce((s,p)=>s+(Number(p.amount)||0),0);
 
   const rows = list.length ? list.map(p=>{
@@ -1118,7 +1166,7 @@ function openStudentPanel(id){
   const s = isNew ? {
     id: genId(), name:'', contactPhone:'', guardianName:'', guardianPhone:'', isMinor:false,
     cefr:'', pricingType:'perLesson', rate:'', packageSize:'', packagePrice:'',
-    status:'active', startDate: todayStr(), notes:'', recurring:null, pinnedSkills:[], studyPoints:[]
+    status:'active', startDate: todayStr(), notes:'', recurring:null, pinnedSkills:[], studyPoints:[], archived:false
   } : getStudent(id);
   if(!s) return;
 
@@ -1156,6 +1204,7 @@ function openStudentPanel(id){
       <h2 class="display">${isNew ? 'New student' : esc(s.name||'Student')}</h2>
       <span class="close-x" data-action="close-modal">✕</span>
     </div>
+    ${s.archived ? `<div class="archived-banner"><span>📁 <strong>Archived student</strong> — hidden from all main views. Full history preserved.</span><button type="button" class="btn small secondary" data-action="restore-student" data-id="${s.id}">Restore</button></div>` : ''}
     ${!isNew ? `<div style="margin-bottom:18px;display:flex;align-items:center;gap:12px;">
         <div class="display" style="font-size:1.6rem;font-weight:600;">${fmtMoney(ledger.balance)}</div>${stampHTML}
       </div>
@@ -1216,11 +1265,13 @@ function openStudentPanel(id){
 
       <div class="form-actions">
         <div class="left">
-          ${!isNew ? `<button type="button" class="btn danger" data-action="delete-student" data-id="${s.id}">Delete</button>` : ''}
+          ${!isNew && s.archived ? `<button type="button" class="btn danger small" data-action="delete-student-permanent" data-id="${s.id}">Delete permanently</button>` : ''}
+          ${!isNew && !s.archived ? `<button type="button" class="btn secondary small" data-action="archive-student" data-id="${s.id}">Archive</button>` : ''}
         </div>
         <div>
+          ${!isNew && s.archived ? `<button type="button" class="btn secondary" data-action="restore-student" data-id="${s.id}">Restore student</button>` : ''}
           <button type="button" class="btn secondary" data-action="close-modal">Cancel</button>
-          <button type="submit" class="btn">Save</button>
+          ${!s.archived ? `<button type="submit" class="btn">Save</button>` : ''}
         </div>
       </div>
     </form>
@@ -1507,17 +1558,49 @@ document.addEventListener('click', function(e){
     renderAll(); // refreshes calendar chips
     return;
   }
-  if(action==='open-student'){ openStudentPanel(t.dataset.id || null); return; }
-  if(action==='delete-student'){
-    if(confirm('Delete this student? Their lesson and payment history will also be removed. This cannot be undone.')){
-      const id = t.dataset.id;
-      state.students = state.students.filter(s=>s.id!==id);
-      state.lessons = state.lessons.filter(l=>l.studentId!==id);
-      state.payments = state.payments.filter(p=>p.studentId!==id);
-      saveState(); closeOverlay(); renderAll(); toast('Student deleted.');
+  if(action==='archive-student'){
+    const s = getStudent(t.dataset.id);
+    if(!s) return;
+    if(confirm(`Archive ${s.name}? They'll be hidden from all main views but their full history is preserved. You can restore them at any time from the Archive.`)){
+      s.archived = true;
+      // Clear future recurring placeholders so they don't litter the calendar
+      state.lessons = state.lessons.filter(l =>
+        !(l.studentId===s.id && l.isRecurring && l.status==='scheduled' && l.date >= todayStr())
+      );
+      saveState(); closeOverlay(); renderAll();
+      toast(`${s.name} archived.`);
     }
     return;
   }
+  if(action==='restore-student'){
+    const s = getStudent(t.dataset.id);
+    if(!s) return;
+    s.archived = false;
+    // Restore recurring placeholders
+    topUpRecurring(s);
+    saveState(); openStudentPanel(s.id); renderAll();
+    toast(`${s.name} restored.`);
+    return;
+  }
+  if(action==='delete-student-permanent'){
+    const s = getStudent(t.dataset.id);
+    if(!s) return;
+    if(confirm(`Permanently delete ${s.name}? This will erase all their lessons, payments, checkpoints, and study points. This cannot be undone.`)
+       && confirm(`Are you sure? "${s.name}" and all associated data will be gone forever.`)){
+      const id = s.id;
+      state.students = state.students.filter(x=>x.id!==id);
+      state.lessons = state.lessons.filter(l=>l.studentId!==id);
+      state.payments = state.payments.filter(p=>p.studentId!==id);
+      state.checkpoints = state.checkpoints.filter(c=>c.studentId!==id);
+      state.learningPoints = state.learningPoints.filter(p=>p.studentId!==id);
+      // Clear placement test localStorage entry
+      try{ localStorage.removeItem(PT_SK_PREFIX + id); }catch{}
+      saveState(); closeOverlay(); currentView='archive'; renderAll();
+      toast(`${s.name} permanently deleted.`);
+    }
+    return;
+  }
+  if(action==='open-student'){ openStudentPanel(t.dataset.id || null); return; }
   if(action==='set-student-filter'){ studentFilter = t.dataset.filter; renderStudents(); return; }
 
   if(action==='open-lesson'){
