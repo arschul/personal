@@ -690,7 +690,7 @@ function renderArchive(){
         <td><span class="name">${esc(s.name)}</span></td>
         <td><span class="badge cefr">${esc(s.cefr||'—')}</span></td>
         <td style="color:var(--ink-faint);font-size:.83rem;">${totalLessons} lesson${totalLessons===1?'':'s'} held</td>
-        <td class="right">${fmtMoney(ledger.balance)}</td>
+        <td class="right">${fmtMoney(Math.abs(ledger.balance))}</td>
       </tr>`;
   }).join('') : '';
 
@@ -754,7 +754,7 @@ function renderDashboard(){
         <div class="sub">${x.ledger.lessonsBilled} lesson${x.ledger.lessonsBilled===1?'':'s'} billed</div>
       </div>
       <div class="stamp ${x.ledger.overdue?'due':'even'}">${x.ledger.overdue?'Due':'Owes'}</div>
-      <div style="min-width:90px;text-align:right;font-weight:600;">${fmtMoney(x.ledger.balance)}</div>
+      <div style="min-width:90px;text-align:right;font-weight:600;">${fmtMoney(Math.abs(x.ledger.balance))}</div>
     </div>
   `).join('') : `<div class="empty">Everyone's settled up.</div>`;
 
@@ -825,7 +825,7 @@ function renderStudents(){
         <td><span class="badge cefr">${esc(s.cefr||'—')}</span></td>
         <td><span class="badge status-${s.status}">${esc(s.status)}</span></td>
         <td>${next ? esc(fmtDateLong(next.date))+' '+esc(next.time||'') : '<span style="color:var(--ink-faint)">—</span>'}</td>
-        <td class="right">${fmtMoney(ledger.balance)} <span class="stamp ${stampClass}" style="margin-left:6px;">${stampLabel}</span></td>
+        <td class="right">${fmtMoney(Math.abs(ledger.balance))} <span class="stamp ${stampClass}" style="margin-left:6px;">${stampLabel}</span></td>
       </tr>`;
   }).join('');
 
@@ -1206,7 +1206,7 @@ function openStudentPanel(id){
     </div>
     ${s.archived ? `<div class="archived-banner"><span>📁 <strong>Archived student</strong> — hidden from all main views. Full history preserved.</span><button type="button" class="btn small secondary" data-action="restore-student" data-id="${s.id}">Restore</button></div>` : ''}
     ${!isNew ? `<div style="margin-bottom:18px;display:flex;align-items:center;gap:12px;">
-        <div class="display" style="font-size:1.6rem;font-weight:600;">${fmtMoney(ledger.balance)}</div>${stampHTML}
+        <div class="display" style="font-size:1.6rem;font-weight:600;">${fmtMoney(Math.abs(ledger.balance))}</div>${stampHTML}
       </div>
       ${studyPointsSectionHTML(s.id)}` : ''}
 
