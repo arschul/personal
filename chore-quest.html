@@ -236,6 +236,8 @@
   .report-empty { text-align:center; padding:40px 20px; color:var(--text-muted); font-weight:700; }
 
   /* SWAP MODAL */
+  #extra-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:400; align-items:flex-start; justify-content:center; backdrop-filter:blur(5px); overflow-y:auto; padding:40px 20px; }
+  #extra-overlay.open { display:flex; }
   #swap-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:400; align-items:flex-start; justify-content:center; backdrop-filter:blur(5px); overflow-y:auto; padding:40px 20px; }
   #swap-overlay.open { display:flex; }
   .swap-box { background:var(--surface); border:2px solid var(--surface2); border-radius:var(--radius); width:100%; max-width:520px; overflow:hidden; }
@@ -496,6 +498,29 @@
     color: var(--accent); margin-bottom: 4px; }
   .pending-row { border-top: 1px solid var(--surface2); padding-top: 12px; margin-top: 12px; }
   .pending-name { font-weight: 900; font-size: 0.85rem; margin-bottom: 8px; }
+
+  /* ── EXTRA (one-off) TASKS ──────────────────────────────────── */
+  .diff-badge.extra { background: rgba(107,163,255,0.2); color: var(--accent4); }
+  .task-item.is-extra { border-left: 3px solid var(--accent4); }
+  .task-item .task-kill { background: none; border: none; color: var(--surface2); cursor: pointer;
+    font-size: 0.85rem; padding: 0 2px; flex-shrink: 0; }
+  .task-item .task-kill:hover { color: var(--accent2); }
+  .btn-extra { background: var(--surface2); border: 2px dashed var(--surface2); color: var(--text-muted);
+    border-radius: var(--radius-sm); padding: 9px 16px; font-family: 'Nunito', sans-serif;
+    font-weight: 900; font-size: 0.78rem; cursor: pointer; transition: all 0.18s; }
+  .btn-extra:hover { border-color: var(--accent4); color: var(--accent4); }
+  .extra-kid-chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+  .extra-chip { background: var(--surface2); border: 2px solid transparent; border-radius: 100px;
+    padding: 7px 14px; cursor: pointer; font-weight: 800; font-size: 0.8rem; color: var(--text-muted);
+    display: flex; align-items: center; gap: 6px; transition: all 0.15s; font-family: 'Nunito', sans-serif; }
+  .extra-chip.on { color: var(--bg); }
+  .extra-field-label { font-size: 0.68rem; font-weight: 900; letter-spacing: 1.5px; color: var(--text-muted);
+    text-transform: uppercase; margin-bottom: 6px; margin-top: 14px; }
+  .extra-pts { display: flex; gap: 7px; flex-wrap: wrap; }
+  .extra-pts button { flex: 1; min-width: 56px; background: var(--surface2); border: 2px solid transparent;
+    color: var(--text-muted); border-radius: var(--radius-sm); padding: 9px 4px; cursor: pointer;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: 1px; transition: all 0.15s; }
+  .extra-pts button.on { background: var(--accent4); border-color: var(--accent4); color: var(--bg); }
 </style>
 </head>
 <body>
@@ -545,7 +570,10 @@
     <div style="padding:24px 28px">
       <div class="quest-header">
         <div><div class="quest-title">⚡ Active Quests</div><div class="quest-date" id="questDate"></div></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="btn-extra" id="extraBtn">⚡ Extra Task</button>
         <button class="btn-sm primary" id="redrawBtn">↺ Reassign</button>
+        </div>
       </div>
       <div class="quest-grid" id="questGrid"></div>
       <div class="quest-commit" id="questCommit"></div>
@@ -705,6 +733,27 @@
       </div>
       <div style="text-align:right">
         <button class="btn-sm primary" id="saveSettings" style="font-size:0.9rem;padding:10px 20px">💾 Save & Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="extra-overlay">
+  <div class="swap-box">
+    <div class="swap-box-header">
+      <div class="swap-box-title" style="color:var(--accent4)">⚡ Extra Task</div>
+      <button class="btn-icon" id="closeExtra">✕</button>
+    </div>
+    <div class="swap-box-body">
+      <div class="extra-field-label" style="margin-top:0">What needs doing?</div>
+      <input class="input-sm" id="extraName" placeholder="e.g. Wash the car" style="width:100%">
+      <div class="extra-field-label">How hard is it?</div>
+      <div class="extra-pts" id="extraPts"></div>
+      <div class="extra-field-label">Who's doing it?</div>
+      <div class="extra-kid-chips" id="extraKids"></div>
+      <div class="settings-hint" id="extraHint"></div>
+      <div style="text-align:right;margin-top:18px">
+        <button class="btn-sm primary" id="addExtraBtn" style="font-size:0.95rem;padding:11px 24px">⚡ Add to Today</button>
       </div>
     </div>
   </div>
@@ -1448,6 +1497,8 @@ function renderQuest(){
     grid.appendChild(card);
     const byRoom={};
     tasks.forEach(t=>{if(!byRoom[t.room])byRoom[t.room]=[];byRoom[t.room].push(t);});
+    // one-offs always sit at the bottom of the card
+    if(byRoom['Extra']){ const e=byRoom['Extra']; delete byRoom['Extra']; byRoom['⚡ Extra'] = e; }
     const wrap=card.querySelector(`#tw-${gi}`);
     Object.entries(byRoom).forEach(([room,rtasks])=>{
       const lbl=document.createElement('div');
@@ -1459,9 +1510,17 @@ function renderQuest(){
       rtasks.forEach(task=>{
         const item=document.createElement('div');
         item.className='task-item'+(task.done?' checked':'');
+        if(task.extra) item.classList.add('is-extra');
         const dl=task.pts===1?'easy':task.pts===2?'medium':'hard';
-        const bc=task.everyone?'star':dl;
-        item.innerHTML=`<div class="task-checkbox">${task.done?'✓':''}</div><span class="task-name">${task.name}</span><span class="diff-badge ${bc}">${task.everyone?'⭐':task.pts+'pt'}</span>`;
+        const bc=task.extra?'extra':(task.everyone?'star':dl);
+        item.innerHTML=`<div class="task-checkbox">${task.done?'✓':''}</div><span class="task-name">${esc(task.name)}</span><span class="diff-badge ${bc}">${task.extra?'⚡'+task.pts+'pt':(task.everyone?'⭐':task.pts+'pt')}</span>`+
+          (task.extra?`<button class="task-kill" title="Remove extra task">✕</button>`:'');
+        const kill=item.querySelector('.task-kill');
+        if(kill) kill.addEventListener('click',ev=>{
+          ev.stopPropagation();
+          playClick();
+          requirePin(()=>removeExtraTask(gi,task._id));
+        });
         item.addEventListener('click',()=>{
           task.done=!task.done;touchTodayLog();saveState();
           task.done?playCheck():playUncheck();
@@ -1602,7 +1661,7 @@ function resetSwap(){
 function renderSwapStep1(){
   const gi=swapState.initiatorGI;
   const kid=state.kids[gi];
-  const tasks=(state.assignments[gi]||[]).filter(t=>!t.done && !t.everyone);
+  const tasks=(state.assignments[gi]||[]).filter(t=>!t.done && !t.everyone && !t.extra);
   const body=document.getElementById('swapBody');
   document.getElementById('swapTitle').textContent=`🔄 ${kid.name}'s Tasks`;
   body.innerHTML='';
@@ -1687,7 +1746,7 @@ function renderSwapStep2(){
   activeKids.forEach(otherKid=>{
     const ogi=state.kids.indexOf(otherKid);
     if(ogi===gi) return;
-    const available=(state.assignments[ogi]||[]).filter(t=>!t.done && !t.everyone);
+    const available=(state.assignments[ogi]||[]).filter(t=>!t.done && !t.everyone && !t.extra);
     // Check if any combination sums to offerPts
     const combos=findCombinations(available, offerPts);
     if(!combos.length) return;
@@ -2016,6 +2075,110 @@ function prettyDay(iso){
   const diff=daysBetween(iso,t);
   if(diff===1) return 'Yesterday';
   return isoToDate(iso).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+
+
+/* ── EXTRA (ONE-OFF) TASKS ────────────────────────────────────────
+   Added straight into today's assignments, never into state.rooms, so
+   they exist for exactly one day and never come back in a future roll. */
+function nextAssignmentUid(){
+  let max=0;
+  for(const gi in state.assignments){
+    for(const t of state.assignments[gi]) if(typeof t._id==='number'&&t._id>max) max=t._id;
+  }
+  return max+1;
+}
+
+function addExtraTask(name, pts, kidIds){
+  if(!state.assignments) return 0;
+  let uid=nextAssignmentUid(), added=0;
+  kidIds.forEach(id=>{
+    const gi=state.kids.findIndex(k=>k.id===id);
+    if(gi<0) return;
+    if(!state.assignments[gi]) state.assignments[gi]=[];
+    state.assignments[gi].push({
+      tid:'extra_'+uid, _id:uid++, name, pts:Number(pts)||1,
+      everyone:false, done:false, room:'Extra', extra:true
+    });
+    added++;
+  });
+  if(added){ touchTodayLog(); saveState(); }
+  return added;
+}
+
+function removeExtraTask(gi, id){
+  const list=state.assignments&&state.assignments[gi];
+  if(!list) return;
+  const i=list.findIndex(t=>t._id===id&&t.extra);
+  if(i<0) return;
+  list.splice(i,1);
+  touchTodayLog(); saveState(); renderQuest();
+}
+
+/* ---- modal ---- */
+let extraPts=2, extraKidSel=new Set();
+
+function openExtraModal(preselectKidId){
+  if(!state.assignments||state.today!==new Date().toDateString()){
+    showToast('Assign today\'s quests first.');
+    return;
+  }
+  extraKidSel=new Set(preselectKidId?[preselectKidId]:getActiveKids().map(k=>k.id));
+  extraPts=2;
+  document.getElementById('extraName').value='';
+  renderExtraModal();
+  document.getElementById('extra-overlay').classList.add('open');
+  setTimeout(()=>{ const f=document.getElementById('extraName'); if(f) f.focus(); },60);
+}
+function closeExtraModal(){ document.getElementById('extra-overlay').classList.remove('open'); }
+
+function renderExtraModal(){
+  const ptsWrap=document.getElementById('extraPts');
+  const labels={1:'1 PT · EASY',2:'2 PT · MED',3:'3 PT · HARD',5:'5 PT · BIG'};
+  ptsWrap.innerHTML='';
+  [1,2,3,5].forEach(p=>{
+    const b=document.createElement('button');
+    b.className=extraPts===p?'on':'';
+    b.textContent=labels[p];
+    b.addEventListener('click',()=>{ playClick(); extraPts=p; renderExtraModal(); });
+    ptsWrap.appendChild(b);
+  });
+
+  const kidsWrap=document.getElementById('extraKids');
+  kidsWrap.innerHTML='';
+  getActiveKids().forEach(kid=>{
+    const col=kidColor(state.kids.indexOf(kid));
+    const on=extraKidSel.has(kid.id);
+    const c=document.createElement('button');
+    c.className='extra-chip'+(on?' on':'');
+    if(on){ c.style.background=col; c.style.borderColor=col; }
+    c.innerHTML=`<span style="font-size:1.05rem">${kid.avatar}</span> ${esc(kid.name)}`;
+    c.addEventListener('click',()=>{
+      playClick();
+      if(extraKidSel.has(kid.id)) extraKidSel.delete(kid.id); else extraKidSel.add(kid.id);
+      renderExtraModal();
+    });
+    kidsWrap.appendChild(c);
+  });
+
+  const n=extraKidSel.size;
+  document.getElementById('extraHint').textContent = n
+    ? `Worth ${extraPts} pt${extraPts>1?'s':''} to ${n===1?'1 kid':n+' kids'}. Today only — it won't come back tomorrow.`
+    : 'Pick at least one kid.';
+}
+
+function submitExtraTask(){
+  const name=document.getElementById('extraName').value.trim();
+  if(!name){ showToast('Give the task a name.'); return; }
+  if(!extraKidSel.size){ showToast('Pick at least one kid.'); return; }
+  playClick();
+  requirePin(()=>{
+    const n=addExtraTask(name,extraPts,[...extraKidSel]);
+    closeExtraModal();
+    renderQuest();
+    playLand();
+    showToast(`"${name}" added to ${n} kid${n>1?'s':''}.`);
+  });
 }
 
 /* ── GRADING ──────────────────────────────────────────────────────
@@ -2588,6 +2751,11 @@ document.getElementById('rollBtn').addEventListener('click',()=>{
     doAssign();
   }
 });
+
+document.getElementById('extraBtn').addEventListener('click',()=>{playClick();openExtraModal();});
+document.getElementById('closeExtra').addEventListener('click',()=>{playClick();closeExtraModal();});
+document.getElementById('addExtraBtn').addEventListener('click',submitExtraTask);
+document.getElementById('extraName').addEventListener('keydown',e=>{ if(e.key==='Enter') submitExtraTask(); });
 
 document.getElementById('redrawBtn').addEventListener('click',()=>{
   playClick();
