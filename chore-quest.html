@@ -433,6 +433,69 @@
   .num-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
   .num-row label { font-size: 0.8rem; font-weight: 800; flex: 1; min-width: 150px; }
   .num-row input { width: 92px; }
+
+  /* ── INLINE GRADING (quest cards) ───────────────────────────── */
+  .grade-inline { border-top: 2px dashed var(--surface2); margin-top: 14px; padding-top: 14px; }
+  .gi-label { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 2px;
+    color: var(--text-muted); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .gi-locked { font-size: 0.68rem; font-weight: 800; color: var(--accent3); letter-spacing: 0.5px; }
+  .quest-commit { position: sticky; bottom: 0; z-index: 5;
+    background: linear-gradient(transparent, var(--bg) 30%); padding: 30px 0 12px; text-align: center; }
+
+  /* ── DASHBOARD ──────────────────────────────────────────────── */
+  .dash-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 30px; }
+  @media(min-width:900px){ .dash-grid { grid-template-columns: repeat(2,1fr); } }
+  .dash-card { background: var(--surface); border: 2px solid var(--surface2); border-left-width: 6px;
+    border-radius: var(--radius); padding: 16px 18px; }
+  .dc-top { display: flex; align-items: center; gap: 12px; }
+  .dc-avatar { font-size: 2.1rem; }
+  .dc-id { flex: 1; min-width: 0; }
+  .dc-name { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 2px; line-height: 1; }
+  .dc-title { font-size: 0.74rem; font-weight: 800; color: var(--text-muted); margin-top: 2px; }
+  .dc-lvl { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; letter-spacing: 1px; line-height: 1; }
+  .dc-lvl small { display: block; font-size: 0.52rem; letter-spacing: 1.5px; color: var(--text-muted);
+    font-family: 'Nunito', sans-serif; font-weight: 900; text-align: center; }
+  .dc-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 14px; }
+  .dc-stat { background: var(--surface2); border-radius: var(--radius-sm); padding: 8px 6px; text-align: center; }
+  .dc-stat-v { font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem; letter-spacing: 0.5px; }
+  .dc-stat-l { font-size: 0.55rem; font-weight: 900; letter-spacing: 0.8px; color: var(--text-muted); text-transform: uppercase; margin-top: 1px; }
+  .dc-wallet { display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--surface2); }
+  .dc-bal { font-family: 'Bebas Neue', sans-serif; font-size: 1.9rem; letter-spacing: 1px; color: var(--accent3); }
+  .dc-bal.zero { color: var(--text-muted); }
+  .dc-rate { font-size: 0.68rem; font-weight: 800; color: var(--text-muted); }
+  .dc-money-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .dc-money-row input { flex: 1; min-width: 70px; }
+  .dc-money-row input.amt { max-width: 82px; flex: 0 0 82px; }
+  .btn-money { border: 2px solid var(--surface2); background: var(--surface2); color: var(--text);
+    border-radius: var(--radius-sm); padding: 7px 12px; font-weight: 900; font-size: 0.75rem;
+    cursor: pointer; font-family: 'Nunito', sans-serif; transition: all 0.15s; }
+  .btn-money.add:hover { border-color: var(--accent3); color: var(--accent3); }
+  .btn-money.spend:hover { border-color: var(--accent2); color: var(--accent2); }
+  .tx-list { margin-top: 12px; display: flex; flex-direction: column; gap: 5px; }
+  .tx { display: flex; align-items: center; gap: 9px; font-size: 0.72rem; font-weight: 700; }
+  .tx-amt { font-family: 'Bebas Neue', sans-serif; font-size: 0.95rem; letter-spacing: 0.5px; min-width: 64px; }
+  .tx-amt.pos { color: var(--accent3); } .tx-amt.neg { color: var(--accent2); }
+  .tx-note { flex: 1; min-width: 0; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tx-del { background: none; border: none; color: var(--surface2); cursor: pointer; font-size: 0.8rem; padding: 0 3px; }
+  .tx-del:hover { color: var(--accent2); }
+  .tx-empty { font-size: 0.7rem; font-weight: 700; color: var(--surface2); }
+
+  .payout-card { background: var(--surface); border: 2px solid var(--accent3); border-radius: var(--radius);
+    padding: 18px 20px; margin-bottom: 24px; box-shadow: 0 0 34px rgba(107,255,184,0.12); }
+  .payout-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; letter-spacing: 2.5px; color: var(--accent3); }
+  .payout-lines { margin: 12px 0; display: flex; flex-direction: column; gap: 5px; font-size: 0.78rem; font-weight: 700; }
+  .payout-line { display: flex; justify-content: space-between; gap: 12px; }
+  .payout-line span:last-child { color: var(--accent3); font-weight: 900; }
+  .btn-pay { background: var(--accent3); color: var(--bg); border: none; border-radius: var(--radius-sm);
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.05rem; letter-spacing: 2px; padding: 11px 24px; cursor: pointer; }
+
+  .pending-card { background: var(--surface); border: 2px solid var(--accent); border-radius: var(--radius);
+    padding: 18px 20px; margin-bottom: 16px; }
+  .pending-head { font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem; letter-spacing: 2px;
+    color: var(--accent); margin-bottom: 4px; }
+  .pending-row { border-top: 1px solid var(--surface2); padding-top: 12px; margin-top: 12px; }
+  .pending-name { font-weight: 900; font-size: 0.85rem; margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -442,7 +505,7 @@
     <div class="header-actions">
       <button class="btn-icon" id="homeBtn">🏠</button>
       <button class="btn-icon" id="rewardsBtn" title="Rewards &amp; Levels">🏆</button>
-      <button class="btn-icon" id="scoreBtn" title="Grade the day">📊</button>
+      <button class="btn-icon" id="dashBtn" title="Dashboard">📊</button>
       <button class="btn-icon" id="settingsBtn">⚙️</button>
     </div>
   </header>
@@ -485,24 +548,26 @@
         <button class="btn-sm primary" id="redrawBtn">↺ Reassign</button>
       </div>
       <div class="quest-grid" id="questGrid"></div>
+      <div class="quest-commit" id="questCommit"></div>
     </div>
   </div>
 
-  <div class="screen" id="score">
+  <div class="screen" id="dash">
     <div style="padding:24px 28px">
       <div class="quest-header">
         <div>
-          <div class="quest-title">📊 Grade the Day</div>
-          <div class="quest-date" id="gradeSubtitle"></div>
+          <div class="quest-title">📊 Dashboard</div>
+          <div class="quest-date" id="dashSubtitle"></div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn-sm" id="gradeBackBtn">← Back</button>
-          <button class="btn-sm primary" id="gradeRewardsBtn">🏆 Rewards</button>
+          <button class="btn-sm" id="dashBackBtn">← Back</button>
+          <button class="btn-sm primary" id="dashRewardsBtn">🏆 Rewards</button>
         </div>
       </div>
-      <div class="day-tabs" id="gradeDayTabs"></div>
-      <div id="gradeCards"></div>
-      <div class="commit-bar" id="commitBar"></div>
+      <div id="dashPayout"></div>
+      <div id="dashPending"></div>
+      <div class="dash-grid" id="dashGrid"></div>
+      <div id="dashGroup"></div>
     </div>
   </div>
 
@@ -746,7 +811,7 @@ const DEFAULT_SETTINGS = {
   groupRewards: DEFAULT_GROUP_REWARDS,
 };
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[]};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[]};
 
 function loadState(){
   try{
@@ -789,6 +854,7 @@ function loadState(){
       // ---- v4 structural migration (idempotent) ----
       state.settings = mergeSettings(p.settings);
       state.dayLog   = Array.isArray(p.dayLog) ? p.dayLog : [];
+      state.ledger   = Array.isArray(p.ledger) ? p.ledger : [];
       if(normalizeIds()) migrated=true;
       recalcAllXp();
 
@@ -804,6 +870,7 @@ function loadState(){
   state.migrations={brushTeeth:true,ptsFixed:true,sweepCorridor:true};
   state.settings=mergeSettings(null);
   state.dayLog=[];
+  state.ledger=[];
   normalizeIds();
   recalcAllXp();
 }
@@ -893,7 +960,8 @@ function saveState(){
   localStorage.setItem('chorequest_v4',JSON.stringify({
     kids:state.kids,rooms:state.rooms,assignments:state.assignments,
     today:state.today,fewerHistory:state.fewerHistory,dishRotation:state.dishRotation,
-    migrations:state.migrations,settings:state.settings,dayLog:state.dayLog
+    migrations:state.migrations,settings:state.settings,dayLog:state.dayLog,
+    ledger:state.ledger
   }));
 }
 
@@ -999,10 +1067,21 @@ function dayPtsForKid(kid){
          assignedCount:tasks.length,
          completedCount:tasks.filter(t=>t.done).length};
 }
-function suggestedMultiplier(kid){
-  const{assignedPts,completedPts}=dayPtsForKid(kid);
-  if(assignedPts<=0) return 1;
-  return Math.round((completedPts/assignedPts)*20)/20;   // snap to 5%
+/* Purely what the checkboxes say for that day. */
+function ticksMultiplier(kid, iso){
+  iso=iso||todayISO();
+  const row=dayRowFor(iso,kid);
+  if(!row||!row.assignedPts) return 1;
+  return Math.round((row.completedPts/row.assignedPts)*20)/20;   // snap to 5%
+}
+/* What a slider should open at: the stored grade once a day is committed,
+   otherwise the tick-derived suggestion. */
+function suggestedMultiplier(kid, iso){
+  iso=iso||todayISO();
+  const day=getDay(iso);
+  const stored=day&&day.kids[kid.id];
+  if(day&&day.committed&&stored&&stored.multiplier!==undefined) return stored.multiplier;
+  return ticksMultiplier(kid,iso);
 }
 
 /* ---- commit ----
@@ -1336,6 +1415,8 @@ function doAssign(){
 function shuffleArr(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}}
 
 /* QUEST */
+let questEditing=false;
+
 function renderQuest(){
   showScreen('quest');
   document.getElementById('questDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
@@ -1386,13 +1467,77 @@ function renderQuest(){
           task.done?playCheck():playUncheck();
           item.classList.toggle('checked',task.done);
           item.querySelector('.task-checkbox').textContent=task.done?'✓':'';
-          updateKidProgress(gi,localIdx);checkAllDone();
+          updateKidProgress(gi,localIdx);refreshSuggestion(kid,localIdx);checkAllDone();
         });
         td.appendChild(item);
       });
       wrap.appendChild(td);
     });
+
+    // Grading lives right under the tasks, so the parent can see exactly
+    // what was and wasn't ticked while deciding the score.
+    const locked=!!(getDay(todayISO())||{}).committed && !questEditing;
+    card.appendChild(buildGradeControls(todayISO(), kid, kidColor(localIdx), locked));
   });
+  renderQuestCommit();
+}
+
+function renderQuestCommit(){
+  const bar=document.getElementById('questCommit');
+  if(!bar) return;
+  const iso=todayISO();
+  const kids=getActiveKids();
+  const day=getDay(iso);
+  const committed=!!(day&&day.committed);
+
+  if(committed&&!questEditing){
+    const earned=kids.map(k=>{
+      const row=day.kids[k.id];
+      return row?`${k.avatar} ${row.xpDelta>0?'+':''}${row.xpDelta}`:null;
+    }).filter(Boolean).join('  ·  ');
+    bar.innerHTML=`<div class="commit-note" style="font-size:0.9rem;color:var(--accent3);font-weight:900;margin-bottom:12px">
+        ✓ Today is graded &nbsp;—&nbsp; ${earned}
+      </div>
+      <button class="btn-commit" id="questEditBtn" style="background:var(--surface2);color:var(--text);box-shadow:none">✎ EDIT GRADES</button>`;
+    document.getElementById('questEditBtn').addEventListener('click',()=>{
+      playClick();
+      requirePin(()=>{ questEditing=true; clearDraft(iso); renderQuest(); });
+    });
+    return;
+  }
+
+  bar.innerHTML=`<button class="btn-commit" id="questCommitBtn">🔐 ${committed?'RE-CONFIRM DAY':'CONFIRM DAY'}</button>
+    <div class="commit-note">${committed
+      ? 'Re-confirming replaces the stored grade — XP is never awarded twice.'
+      : 'Grade whenever you like: unticked tasks just mean a lower score, not a blocked day.'}</div>`;
+  document.getElementById('questCommitBtn').addEventListener('click',()=>{
+    commitDayUI(iso,kids,()=>{ questEditing=false; clearDraft(iso); renderQuest(); });
+  });
+}
+
+/* Re-seed an untouched slider as tasks get ticked, but never override a
+   value the parent has already set by hand. */
+function refreshSuggestion(kid,localIdx){
+  const iso=todayISO();
+  const day=getDay(iso);
+  if(day&&day.committed&&!questEditing) return;
+  const d=draftFor(iso);
+  const card=document.getElementById('kid-card-'+state.kids.indexOf(kid));
+  if(!card) return;
+  const block=card.querySelector('.grade-inline');
+  if(!block||block.dataset.touched==='1'){ return; }
+  const sug=ticksMultiplier(kid,iso);
+  d[kid.id]=sug;
+  const slider=block.querySelector('.gc-slider');
+  const pctEl=block.querySelector('.gc-pct');
+  const sumEl=block.querySelector('.gc-summary');
+  const row=dayRowFor(iso,kid)||{};
+  if(slider){ slider.value=Math.round(sug*100); }
+  if(pctEl) pctEl.textContent=Math.round(sug*100)+'%';
+  if(sumEl) sumEl.textContent=`${row.completedCount||0}/${row.assignedCount||0} ticked · ${row.completedPts||0} of ${row.assignedPts||0} pts`;
+  const qb=block.querySelector('.gc-quick button[data-set="suggest"]');
+  if(qb) qb.textContent=`↺ From ticks (${Math.round(sug*100)}%)`;
+  renderGradePreview(block.querySelector('.gc-preview'),iso,kid);
 }
 
 function updateKidProgress(gi,localIdx){
@@ -1735,6 +1880,102 @@ document.getElementById('settings-overlay').addEventListener('click',e=>{if(e.ta
 document.getElementById('saveSettings').addEventListener('click',()=>{saveState();document.getElementById('settings-overlay').classList.remove('open');showToast('Settings saved!');renderHome();});
 
 
+
+/* ============================================================
+   MONEY LEDGER
+   Balance is always the sum of the ledger — never stored directly,
+   so it cannot drift out of sync with its own history.
+   ============================================================ */
+
+function walletBalance(kidId){
+  return state.ledger.reduce((s,t)=>t.kidId===kidId?s+t.amount:s,0);
+}
+function walletTx(kidId,limit){
+  const rows=state.ledger.filter(t=>t.kidId===kidId).sort((a,b)=>b.ts-a.ts);
+  return limit?rows.slice(0,limit):rows;
+}
+function addTx(kidId,amount,note,kind,weekKey){
+  const t={id:newId('tx'),kidId,amount:Math.round(Number(amount)*100)/100,
+           note:note||'',kind:kind||'adjust',date:todayISO(),ts:Date.now()};
+  if(weekKey) t.week=weekKey;
+  state.ledger.push(t);
+  return t;
+}
+function removeTx(txId){
+  const i=state.ledger.findIndex(t=>t.id===txId);
+  if(i>=0) state.ledger.splice(i,1);
+}
+function totalWallets(){
+  return state.kids.reduce((s,k)=>s+walletBalance(k.id),0);
+}
+
+/* ---- weekly allowance ----
+   A week is keyed by the Sunday that closes it. Payout becomes available
+   that Sunday at 20:00, and the level used is the kid's level as of the
+   end of that week — so paying late can't be gamed by grinding XP after. */
+const PAYOUT_HOUR = 20;
+
+function sundayOf(d){
+  const x=new Date(d); x.setHours(0,0,0,0);
+  x.setDate(x.getDate()+(7-x.getDay())%7);   // forward to Sunday (0=Sun)
+  return x;
+}
+function weekKeyFor(iso){ return 'W'+todayISO(sundayOf(isoToDate(iso))); }
+function weekLabel(key){
+  const end=isoToDate(key.slice(1));
+  const start=new Date(end); start.setDate(start.getDate()-6);
+  const f=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  return f(start)+' – '+f(end);
+}
+function isWeekPaid(key){ return state.ledger.some(t=>t.kind==='allowance'&&t.week===key); }
+
+/* Replay XP up to and including a date, so historic levels are exact. */
+function xpAtDate(kidId, iso){
+  let xp=0;
+  for(const day of committedDaysSorted()){
+    if(day.date>iso) break;
+    const row=day.kids[kidId];
+    if(row) xp=Math.max(0,xp+xpDeltaFor(row.multiplier));
+  }
+  return xp;
+}
+function levelAtDate(kidId, iso){ return levelFromXp(xpAtDate(kidId,iso)); }
+
+/* Weeks that are due and not yet paid (looks back 8 weeks max). */
+function duePayouts(){
+  const out=[];
+  const days=committedDaysSorted();
+  if(!days.length) return out;
+  const firstIso=days[0].date;
+  const now=new Date();
+  let s=sundayOf(now);
+  const cutoff=new Date(s); cutoff.setHours(PAYOUT_HOUR,0,0,0);
+  if(now<cutoff) s.setDate(s.getDate()-7);          // this week's payout hasn't landed yet
+  for(let i=0;i<8;i++){
+    const iso=todayISO(s);
+    if(iso<firstIso) break;
+    const key='W'+iso;
+    if(!isWeekPaid(key)){
+      const lines=getActiveKids().map(k=>({kid:k,lvl:levelAtDate(k.id,iso)}))
+        .map(x=>({...x,amount:rewardsAt(x.lvl).allowance}))
+        .filter(x=>x.amount>0);
+      out.push({key,endIso:iso,lines,total:lines.reduce((a,b)=>a+b.amount,0)});
+    }
+    s.setDate(s.getDate()-7);
+  }
+  return out.reverse();
+}
+function payWeek(key){
+  if(isWeekPaid(key)) return 0;
+  const due=duePayouts().find(d=>d.key===key);
+  if(!due) return 0;
+  due.lines.forEach(l=>{
+    addTx(l.kid.id,l.amount,`Weekly allowance · Lvl ${l.lvl} · ${weekLabel(key)}`,'allowance',key);
+  });
+  saveState();
+  return due.total;
+}
+
 /* ── DAY SNAPSHOT ─────────────────────────────────────────────────
    Keeps today's assigned/completed points mirrored into dayLog as the
    day progresses, so a day stays gradable after assignments roll over. */
@@ -1777,146 +2018,122 @@ function prettyDay(iso){
   return isoToDate(iso).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 }
 
-/* ── GRADE DAY SCREEN ─────────────────────────────────────────────
-   Slider positions live only in this object. Nothing is written to
-   state until the PIN-gated commit, so kids cannot grade themselves. */
-let gradeDayIso = null;
-let gradeDraft  = {};   // kidId -> multiplier (0..1), volatile
+/* ── GRADING ──────────────────────────────────────────────────────
+   Sliders live inline under each kid's task list. Draft values are held
+   in memory only and are never persisted, so a kid moving a slider
+   changes nothing — only the PIN-gated commit writes XP. */
+let gradeDrafts = {};   // iso -> { kidId: multiplier }
 
-function openGradeScreen(iso){
-  const days=gradableDays();
-  gradeDayIso = iso || (days.includes(todayISO())?todayISO():days[0]) || todayISO();
-  resetGradeDraft();
-  renderGradeScreen();
-  showScreen('score');
+function draftFor(iso){
+  if(!gradeDrafts[iso]) gradeDrafts[iso]={};
+  return gradeDrafts[iso];
 }
-
-function resetGradeDraft(){
-  gradeDraft={};
-  gradeKidsFor(gradeDayIso).forEach(kid=>{
-    gradeDraft[kid.id]=suggestedMultiplier(kid, gradeDayIso);
-  });
+function seedDraft(iso, kids){
+  const d=draftFor(iso);
+  kids.forEach(kid=>{ if(d[kid.id]===undefined) d[kid.id]=suggestedMultiplier(kid,iso); });
+  return d;
 }
+function clearDraft(iso){ delete gradeDrafts[iso]; }
 
-/* Whose row exists for that day. Falls back to active kids for today. */
-function gradeKidsFor(iso){
+function dayRowFor(iso, kid){
   const day=getDay(iso);
-  if(day && Object.keys(day.kids).length){
-    return state.kids.filter(k=>day.kids[k.id]);
+  const row=(day&&day.kids[kid.id])||null;
+  if(row) return row;
+  if(iso===todayISO()){
+    const live=dayPtsForKid(kid);
+    if(live.assignedCount>0) return live;
   }
-  return iso===todayISO()?getActiveKids():[];
+  return null;
 }
 
-function renderGradeScreen(){
-  const tabs=document.getElementById('gradeDayTabs');
-  const wrap=document.getElementById('gradeCards');
-  const bar=document.getElementById('commitBar');
-  const days=gradableDays();
-
-  document.getElementById('gradeSubtitle').textContent =
-    isoToDate(gradeDayIso).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-
-  tabs.innerHTML='';
-  days.forEach(iso=>{
-    const d=getDay(iso);
-    const btn=document.createElement('button');
-    btn.className='day-tab'+(iso===gradeDayIso?' active':'');
-    btn.innerHTML=`${prettyDay(iso)} <span class="dt-flag">${d&&d.committed?'✓':'•'}</span>`;
-    btn.addEventListener('click',()=>{ playClick(); gradeDayIso=iso; resetGradeDraft(); renderGradeScreen(); });
-    tabs.appendChild(btn);
-  });
-
-  const kids=gradeKidsFor(gradeDayIso);
-  const day=getDay(gradeDayIso);
-  const committed=!!(day&&day.committed);
-
-  wrap.innerHTML='';
-  if(!kids.length){
-    wrap.innerHTML='<div class="grade-card" style="border-left-color:var(--surface2)"><div class="gc-summary" style="margin:0">Nothing to grade for this day — no quests were assigned.</div></div>';
-    bar.innerHTML='';
-    return;
-  }
-
-  kids.forEach(kid=>{
-    const localIdx=state.kids.indexOf(kid);
-    const col=kidColor(localIdx);
-    const row=dayRowFor(gradeDayIso,kid)||{assignedPts:0,completedPts:0,assignedCount:0,completedCount:0};
-    const card=document.createElement('div');
-    card.className='grade-card';
-    card.style.borderLeftColor=col;
-    card.innerHTML=`
-      <div class="gc-head">
-        <span class="gc-avatar">${kid.avatar}</span>
-        <span class="gc-name" style="color:${col}">${esc(kid.name)}</span>
-        <span class="lvl-badge" style="color:${col};border-color:${col}33">LVL ${levelFromXp(kid.xp)} · ${esc(levelTitle(levelFromXp(kid.xp)))}</span>
-      </div>
-      <div class="gc-summary">${row.completedCount||0}/${row.assignedCount||0} tasks checked off · ${row.completedPts||0} of ${row.assignedPts||0} pts</div>
-      <div class="gc-slider-row">
-        <input type="range" class="gc-slider" min="0" max="100" step="5" value="${Math.round((gradeDraft[kid.id]??1)*100)}" data-kid="${kid.id}">
-        <span class="gc-pct" style="color:${col}" id="gpct-${kid.id}">${Math.round((gradeDraft[kid.id]??1)*100)}%</span>
-      </div>
-      <div class="gc-quick">
-        <button data-kid="${kid.id}" data-set="suggest">↺ Suggested (${Math.round(suggestedMultiplier(kid,gradeDayIso)*100)}%)</button>
-        <button data-kid="${kid.id}" data-set="1">100%</button>
-        <button data-kid="${kid.id}" data-set="${state.settings.breakEvenPct/100}">Break-even</button>
-      </div>
-      <div class="gc-preview" id="gprev-${kid.id}"></div>`;
-    wrap.appendChild(card);
-
-    const slider=card.querySelector('.gc-slider');
-    slider.style.accentColor=col;
-    slider.addEventListener('input',e=>{
-      gradeDraft[kid.id]=Number(e.target.value)/100;
-      document.getElementById('gpct-'+kid.id).textContent=e.target.value+'%';
-      renderGradePreview(kid);
-    });
-    card.querySelectorAll('.gc-quick button').forEach(b=>{
-      b.addEventListener('click',()=>{
-        playClick();
-        const v=b.dataset.set==='suggest'?suggestedMultiplier(kid,gradeDayIso):Number(b.dataset.set);
-        gradeDraft[kid.id]=Math.round(v*20)/20;
-        slider.value=Math.round(gradeDraft[kid.id]*100);
-        document.getElementById('gpct-'+kid.id).textContent=slider.value+'%';
-        renderGradePreview(kid);
-      });
-    });
-    renderGradePreview(kid);
-  });
-
-  bar.innerHTML=`
-    <button class="btn-commit" id="commitBtn">🔐 ${committed?'RE-CONFIRM DAY':'CONFIRM DAY'}</button>
-    <div class="commit-note">${committed
-      ? 'Already graded. Re-confirming replaces the old result — XP is never awarded twice.'
-      : 'Parent PIN required. Nothing is saved until you confirm.'}</div>`;
-  document.getElementById('commitBtn').addEventListener('click',doCommitDay);
+function gradableDays(){
+  const set=new Set();
+  if(state.assignments && state.today===new Date().toDateString()) set.add(todayISO());
+  state.dayLog.forEach(d=>{ if(canEditDay(d.date)) set.add(d.date); });
+  return [...set].sort().reverse();
+}
+function prettyDay(iso){
+  const t=todayISO();
+  if(iso===t) return 'Today';
+  if(daysBetween(iso,t)===1) return 'Yesterday';
+  return isoToDate(iso).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 }
 
-/* Live XP preview. For a committed day this shows the delta *relative to
-   the current stored grade*, so the parent sees the true effect of editing. */
-function renderGradePreview(kid){
-  const el=document.getElementById('gprev-'+kid.id);
+/* Builds the slider + preview block for one kid on one day.
+   Grading never requires every task to be ticked — the ticks only
+   seed a suggestion, which the parent is free to override. */
+function buildGradeControls(iso, kid, col, locked){
+  const d=seedDraft(iso,[kid]);
+  const row=dayRowFor(iso,kid)||{assignedPts:0,completedPts:0,assignedCount:0,completedCount:0};
+  const pct=Math.round((d[kid.id]??1)*100);
+  const el=document.createElement('div');
+  el.className='grade-inline';
+  el.innerHTML=`
+    <div class="gi-label">
+      <span>Quality of work</span>
+      ${locked?'<span class="gi-locked">✓ GRADED</span>':''}
+    </div>
+    <div class="gc-summary">${row.completedCount||0}/${row.assignedCount||0} ticked · ${row.completedPts||0} of ${row.assignedPts||0} pts</div>
+    <div class="gc-slider-row">
+      <input type="range" class="gc-slider" min="0" max="100" step="5" value="${pct}" ${locked?'disabled':''}>
+      <span class="gc-pct" style="color:${col}">${pct}%</span>
+    </div>
+    ${locked?'':`<div class="gc-quick">
+      <button data-set="suggest">↺ From ticks (${Math.round(ticksMultiplier(kid,iso)*100)}%)</button>
+      <button data-set="1">100%</button>
+      <button data-set="${state.settings.breakEvenPct/100}">Break-even</button>
+    </div>`}
+    <div class="gc-preview"></div>`;
+
+  const slider=el.querySelector('.gc-slider');
+  const pctEl=el.querySelector('.gc-pct');
+  const prev=el.querySelector('.gc-preview');
+  slider.style.accentColor=col;
+  const paint=()=>renderGradePreview(prev,iso,kid);
+  slider.addEventListener('input',e=>{
+    d[kid.id]=Number(e.target.value)/100;
+    pctEl.textContent=e.target.value+'%';
+    el.dataset.touched='1';
+    paint();
+  });
+  el.querySelectorAll('.gc-quick button').forEach(b=>{
+    b.addEventListener('click',()=>{
+      playClick();
+      const v=b.dataset.set==='suggest'?ticksMultiplier(kid,iso):Number(b.dataset.set);
+      d[kid.id]=Math.round(v*20)/20;
+      slider.value=Math.round(d[kid.id]*100);
+      pctEl.textContent=slider.value+'%';
+      el.dataset.touched=b.dataset.set==='suggest'?'0':'1';
+      paint();
+    });
+  });
+  paint();
+  return el;
+}
+
+/* For a committed day the delta shown is relative to the stored grade,
+   so the parent sees the true effect of an edit rather than a re-award. */
+function renderGradePreview(el, iso, kid){
   if(!el) return;
-  const day=getDay(gradeDayIso);
+  const mult=draftFor(iso)[kid.id]??1;
+  const day=getDay(iso);
   const stored=(day&&day.committed&&day.kids[kid.id])?day.kids[kid.id]:null;
-  const newDelta=xpDeltaFor(gradeDraft[kid.id]);
-  const oldDelta=stored?xpDeltaFor(stored.multiplier):0;
-  const shift=newDelta-oldDelta;
+  const newDelta=xpDeltaFor(mult);
+  const shift=newDelta-(stored?xpDeltaFor(stored.multiplier):0);
   const projected=Math.max(0,kid.xp+shift);
-  const lvlNow=levelFromXp(kid.xp), lvlNext=levelFromXp(projected);
+  const lvlNow=levelFromXp(kid.xp), lvlNew=levelFromXp(projected);
   const cls=newDelta>0?'up':newDelta<0?'down':'flat';
-  const sign=newDelta>0?'+':'';
-  let move='';
-  if(lvlNext>lvlNow) move=`<span style="color:var(--accent3)">▲ LEVEL UP → ${esc(levelTitle(lvlNext))}</span>`;
-  else if(lvlNext<lvlNow) move=`<span style="color:var(--accent2)">▼ drops to ${esc(levelTitle(lvlNext))}</span>`;
-  else{
-    const toNext=xpForLevel(Math.min(MAX_LEVEL,lvlNext+1))-projected;
-    move=lvlNext>=MAX_LEVEL?'Max level':`${toNext} XP to ${esc(levelTitle(lvlNext+1))}`;
-  }
-  el.innerHTML=`<span class="gc-delta ${cls}">${sign}${newDelta} XP</span>
-    <span class="gc-outcome">→ ${projected} XP · Lvl ${lvlNext} · ${move}</span>`;
+  let move;
+  if(lvlNew>lvlNow) move=`<span style="color:var(--accent3)">▲ LEVEL UP → ${esc(levelTitle(lvlNew))}</span>`;
+  else if(lvlNew<lvlNow) move=`<span style="color:var(--accent2)">▼ drops to ${esc(levelTitle(lvlNew))}</span>`;
+  else if(lvlNew>=MAX_LEVEL) move='Max level';
+  else move=`${xpForLevel(lvlNew+1)-projected} XP to ${esc(levelTitle(lvlNew+1))}`;
+  el.innerHTML=`<span class="gc-delta ${cls}">${newDelta>0?'+':''}${newDelta} XP</span>
+    <span class="gc-outcome">→ ${projected} XP · Lvl ${lvlNew} · ${move}</span>`;
 }
 
-function doCommitDay(){
+/* PIN-gated commit. onDone lets each caller re-render its own surface. */
+function commitDayUI(iso, kids, onDone){
   playClick();
   if(!hasPin()){
     showToast('Set a parent PIN first — grading must be locked.');
@@ -1924,18 +2141,155 @@ function doCommitDay(){
     return;
   }
   requirePin(()=>{
-    const snapshot={...gradeDraft};
-    const{levelUps,levelDowns}=commitDay(gradeDayIso,snapshot);
+    const d=draftFor(iso);
+    const grades={};
+    kids.forEach(k=>{ grades[k.id]=d[k.id]??suggestedMultiplier(k,iso); });
+    const{levelUps,levelDowns}=commitDay(iso,grades);
     renderHome();
-    renderGradeScreen();
-    queueLevelCards([
-      ...levelUps.map(x=>({...x,dir:'up'})),
-      ...levelDowns.map(x=>({...x,dir:'down'})),
-    ]);
-    if(!levelUps.length&&!levelDowns.length){
-      playCheck();
-      showToast('Day confirmed. XP awarded.');
-    }
+    if(onDone) onDone();
+    queueLevelCards([...levelUps.map(x=>({...x,dir:'up'})),...levelDowns.map(x=>({...x,dir:'down'}))]);
+    if(!levelUps.length&&!levelDowns.length){ playCheck(); showToast('Day confirmed. XP awarded.'); }
+  });
+}
+
+/* ── DASHBOARD ────────────────────────────────────────────────── */
+function openDashboard(){ renderDashboard(); showScreen('dash'); }
+
+function renderDashboard(){
+  const grid=document.getElementById('dashGrid');
+  document.getElementById('dashSubtitle').textContent=
+    `${getActiveKids().length} active · ${formatMoney(totalWallets())} in wallets`;
+
+  renderPayoutPanel();
+  renderPendingPanel();
+  renderGroupPanel(document.getElementById('dashGroup'), true);
+
+  grid.innerHTML='';
+  state.kids.forEach((kid,i)=>{
+    const col=kidColor(i), lvl=levelFromXp(kid.xp||0), r=rewardsAt(lvl);
+    const bal=walletBalance(kid.id);
+    const card=document.createElement('div');
+    card.className='dash-card';
+    card.style.borderLeftColor=col;
+    if(!kid.active) card.style.opacity='0.55';
+    card.innerHTML=`
+      <div class="dc-top">
+        <span class="dc-avatar">${kid.avatar}</span>
+        <div class="dc-id">
+          <div class="dc-name" style="color:${col}">${esc(kid.name)}</div>
+          <div class="dc-title">${esc(r.title)} · ${kid.xp||0} XP${kid.active?'':' · out'}</div>
+          <div class="xp-bar"><div class="xp-fill" style="width:${levelProgressPct(kid.xp||0)}%;background:${col}"></div></div>
+        </div>
+        <div class="dc-lvl" style="color:${col}">${lvl}<small>Level</small></div>
+      </div>
+      <div class="dc-stats">
+        <div class="dc-stat"><div class="dc-stat-v">${r.screens.tv}</div><div class="dc-stat-l">📺 TV</div></div>
+        <div class="dc-stat"><div class="dc-stat-v">${r.screens.xbox}</div><div class="dc-stat-l">🎮 Xbox</div></div>
+        <div class="dc-stat"><div class="dc-stat-v">${r.screens.pc}</div><div class="dc-stat-l">💻 PC</div></div>
+        <div class="dc-stat"><div class="dc-stat-v">${lvl>=MAX_LEVEL?'—':xpToNextLevel(kid.xp||0)}</div><div class="dc-stat-l">XP to next</div></div>
+      </div>
+      <div class="dc-wallet">
+        <div class="dc-bal ${bal===0?'zero':''}">${formatMoney(bal)}</div>
+        <div class="dc-rate">${r.allowance>0?formatMoney(r.allowance)+' / week':'no allowance yet'}</div>
+      </div>
+      <div class="dc-money-row">
+        <input class="input-sm amt" type="number" step="0.5" min="0" placeholder="0,00">
+        <input class="input-sm note" type="text" placeholder="What for?">
+        <button class="btn-money add">＋</button>
+        <button class="btn-money spend">－</button>
+      </div>
+      <div class="tx-list"></div>`;
+    grid.appendChild(card);
+
+    const amt=card.querySelector('.amt'), note=card.querySelector('.note');
+    const doTx=sign=>{
+      const v=Math.abs(Number(amt.value));
+      if(!v){ showToast('Enter an amount first.'); return; }
+      playClick();
+      requirePin(()=>{
+        addTx(kid.id, sign*v, note.value.trim()||(sign>0?'Added':'Spent'), sign>0?'bonus':'spend');
+        saveState(); renderDashboard();
+        showToast(`${sign>0?'Added':'Spent'} ${formatMoney(v)} · ${kid.name}`);
+      });
+    };
+    card.querySelector('.add').addEventListener('click',()=>doTx(1));
+    card.querySelector('.spend').addEventListener('click',()=>doTx(-1));
+
+    const list=card.querySelector('.tx-list');
+    const rows=walletTx(kid.id,6);
+    if(!rows.length) list.innerHTML='<div class="tx-empty">No transactions yet.</div>';
+    rows.forEach(t=>{
+      const row=document.createElement('div');
+      row.className='tx';
+      row.innerHTML=`<span class="tx-amt ${t.amount>=0?'pos':'neg'}">${t.amount>=0?'+':'−'}${formatMoney(Math.abs(t.amount))}</span>
+        <span class="tx-note">${esc(t.note)}</span>
+        <button class="tx-del" title="Undo">✕</button>`;
+      row.querySelector('.tx-del').addEventListener('click',()=>{
+        playClick();
+        requirePin(()=>{ removeTx(t.id); saveState(); renderDashboard(); showToast('Transaction removed.'); });
+      });
+      list.appendChild(row);
+    });
+  });
+}
+
+function renderPayoutPanel(){
+  const el=document.getElementById('dashPayout');
+  const due=duePayouts().filter(d=>d.lines.length);
+  if(!due.length){ el.innerHTML=''; return; }
+  el.innerHTML='';
+  due.forEach(d=>{
+    const box=document.createElement('div');
+    box.className='payout-card';
+    box.innerHTML=`
+      <div class="payout-title">💰 Allowance due · ${weekLabel(d.key)}</div>
+      <div class="payout-lines">${d.lines.map(l=>
+        `<div class="payout-line"><span>${l.kid.avatar} ${esc(l.kid.name)} · Lvl ${l.lvl} at week's end</span><span>${formatMoney(l.amount)}</span></div>`
+      ).join('')}</div>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <button class="btn-pay">Pay ${formatMoney(d.total)}</button>
+        <span class="settings-hint" style="margin:0">Paid at the level each kid held when the week closed.</span>
+      </div>`;
+    box.querySelector('.btn-pay').addEventListener('click',()=>{
+      playClick();
+      requirePin(()=>{
+        const paid=payWeek(d.key);
+        playComplete(); renderDashboard();
+        showToast(`Allowance paid · ${formatMoney(paid)}`);
+      });
+    });
+    el.appendChild(box);
+  });
+}
+
+/* Past days that were never graded still get sliders here, since their
+   task lists are gone but the point snapshot survives. */
+function renderPendingPanel(){
+  const el=document.getElementById('dashPending');
+  const pend=gradableDays().filter(iso=>iso!==todayISO()&&!(getDay(iso)||{}).committed);
+  el.innerHTML='';
+  pend.forEach(iso=>{
+    const kids=state.kids.filter(k=>(getDay(iso)||{kids:{}}).kids[k.id]);
+    if(!kids.length) return;
+    const box=document.createElement('div');
+    box.className='pending-card';
+    box.innerHTML=`<div class="pending-head">⏳ ${prettyDay(iso)} was never graded</div>
+      <div class="settings-hint" style="margin-top:0">No XP has been awarded for this day yet.</div>`;
+    kids.forEach(kid=>{
+      const col=kidColor(state.kids.indexOf(kid));
+      const row=document.createElement('div');
+      row.className='pending-row';
+      row.innerHTML=`<div class="pending-name" style="color:${col}">${kid.avatar} ${esc(kid.name)}</div>`;
+      row.appendChild(buildGradeControls(iso,kid,col,false));
+      box.appendChild(row);
+    });
+    const btn=document.createElement('button');
+    btn.className='btn-commit';
+    btn.style.cssText='margin-top:18px;font-size:1.1rem;padding:12px 28px';
+    btn.textContent='🔐 CONFIRM '+prettyDay(iso).toUpperCase();
+    btn.addEventListener('click',()=>commitDayUI(iso,kids,()=>{ clearDraft(iso); renderDashboard(); }));
+    box.appendChild(btn);
+    el.appendChild(box);
   });
 }
 
@@ -2207,14 +2561,14 @@ function renderPinSetup(){
 /* Gated actions */
 document.getElementById('homeBtn').addEventListener('click',()=>{playClick();renderHome();showScreen('home');});
 document.getElementById('rewardsBtn').addEventListener('click',()=>{playClick();openRewardsScreen();});
-document.getElementById('scoreBtn').addEventListener('click',()=>{playClick();openGradeScreen();});
-document.getElementById('gradeRewardsBtn').addEventListener('click',()=>{playClick();openRewardsScreen();});
+document.getElementById('dashBtn').addEventListener('click',()=>{playClick();openDashboard();});
+document.getElementById('dashRewardsBtn').addEventListener('click',()=>{playClick();openRewardsScreen();});
 document.getElementById('rewardsBackBtn').addEventListener('click',()=>{
   playClick();
   const hasActiveQuests=state.assignments&&state.today===new Date().toDateString();
   if(hasActiveQuests) renderQuest(); else { renderHome(); showScreen('home'); }
 });
-document.getElementById('gradeBackBtn').addEventListener('click',()=>{
+document.getElementById('dashBackBtn').addEventListener('click',()=>{
   playClick();
   const hasActiveQuests=state.assignments&&state.today===new Date().toDateString();
   if(hasActiveQuests) renderQuest(); else { renderHome(); showScreen('home'); }
@@ -2399,13 +2753,16 @@ document.getElementById('newDayBtn').addEventListener('click',()=>{
     if(day && !day.committed && Object.keys(day.kids).length &&
        !confirm("Today hasn't been graded yet — no XP was awarded. Start a new day anyway?")) return;
     document.getElementById('allDoneOverlay').classList.remove('show');
+    questEditing=false; gradeDrafts={};
     state.assignments=null;state.today=null;saveState();renderHome();showScreen('home');
   });
 });
 document.getElementById('allDoneGradeBtn').addEventListener('click',()=>{
   playClick();
   document.getElementById('allDoneOverlay').classList.remove('show');
-  openGradeScreen(todayISO());
+  renderQuest();
+  const bar=document.getElementById('questCommit');
+  if(bar) bar.scrollIntoView({behavior:'smooth',block:'end'});
 });
 document.getElementById('allDoneBackBtn').addEventListener('click',()=>{
   playClick();
