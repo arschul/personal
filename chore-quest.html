@@ -312,8 +312,10 @@
   .quest-date {
     font-size: 0.78rem; color: var(--text-muted); margin-top: 5px; font-style: italic;
   }
-  .quest-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
-  @media(min-width:820px){ .quest-grid { grid-template-columns: repeat(2,1fr); } }
+  .quest-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media(min-width:560px){ .quest-grid { grid-template-columns: repeat(2,1fr); } }
+  /* four contracts across, so the whole board reads in one glance */
+  @media(min-width:1080px){ .quest-grid { grid-template-columns: repeat(4,1fr); gap: 12px; } }
 
   /* the contract itself */
   .kid-card {
@@ -342,53 +344,56 @@
   }
 
   .kid-card-header {
-    display: flex; align-items: center; gap: 11px; padding: 18px 20px 12px;
+    display: flex; align-items: center; gap: 9px; padding: 13px 14px 9px;
     border-bottom: 1px solid rgba(120,92,48,0.28);
   }
-  .kid-card-avatar { font-size: 1.7rem; }
+  .kid-card-avatar { font-size: 1.4rem; }
   .kid-card-name {
-    font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 1.2rem;
-    letter-spacing: 0.5px; flex: 1; min-width: 0;
+    font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 1.02rem;
+    letter-spacing: 0.3px; flex: 1; min-width: 0;
   }
   .kid-card-pts { text-align: right; flex-shrink: 0; }
-  .pts-current { font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.6rem; line-height: 1; }
+  .pts-current { font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.3rem; line-height: 1; }
   .pts-target {
     font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 1.4px;
     text-transform: uppercase; color: var(--ink-soft); margin-top: 3px;
   }
   .progress-bar {
-    height: 5px; background: rgba(90,68,34,0.22); margin: 0 20px; border-radius: 100px; overflow: hidden;
+    height: 4px; background: rgba(90,68,34,0.22); margin: 0 14px; border-radius: 100px; overflow: hidden;
   }
   .progress-fill { height: 100%; border-radius: 100px; transition: width 0.45s ease; }
 
   .kid-card-section-label {
     font-family: 'Cinzel', Georgia, serif; font-weight: 600;
     font-size: 0.58rem; letter-spacing: 2.4px; text-transform: uppercase;
-    color: var(--ink-soft); padding: 15px 20px 5px;
-    display: flex; align-items: center; gap: 9px;
+    color: var(--ink-soft); padding: 11px 14px 3px;
+    display: flex; align-items: center; gap: 8px;
   }
   .kid-card-section-label::after {
     content: ''; flex: 1; height: 1px; background: rgba(120,92,48,0.3);
   }
   .kid-tasks { display: flex; flex-direction: column; }
   .task-item {
-    display: flex; align-items: center; gap: 11px; padding: 9px 20px; cursor: pointer;
+    display: flex; align-items: center; gap: 7px; padding: 5px 14px; cursor: pointer;
     transition: background 0.15s; border-bottom: 1px dotted rgba(120,92,48,0.25);
   }
   .task-item:last-child { border-bottom: none; }
   .task-item:hover { background: rgba(160,124,68,0.13); }
   .task-checkbox {
-    width: 21px; height: 21px; flex-shrink: 0; border: 1.5px solid rgba(90,68,34,0.45);
+    width: 18px; height: 18px; flex-shrink: 0; border: 1.5px solid rgba(90,68,34,0.45);
     border-radius: 3px; display: flex; align-items: center; justify-content: center;
     font-size: 0.85rem; color: var(--moss); background: rgba(255,255,255,0.28);
     transition: all 0.15s;
   }
   .task-item.checked .task-checkbox { background: var(--moss); border-color: var(--moss); color: #f3ecd9; }
-  .task-name { flex: 1; min-width: 0; font-size: 0.9rem; line-height: 1.35; }
+  /* name and badge sit together; the slack goes to the right of both */
+  .task-name { flex: 0 1 auto; min-width: 0; font-size: 0.83rem; line-height: 1.3; }
+  .task-item > .diff-badge:last-child, .task-item > .diff-badge { margin-right: auto; }
+  .task-item .task-kill { margin-left: auto; }
   .task-item.checked .task-name { text-decoration: line-through; opacity: 0.5; }
   .diff-badge {
-    font-family: 'Cinzel', serif; font-size: 0.55rem; font-weight: 700; letter-spacing: 1px;
-    padding: 2px 7px; border-radius: 3px; text-transform: uppercase; flex-shrink: 0;
+    font-family: 'Cinzel', serif; font-size: 0.5rem; font-weight: 700; letter-spacing: 0.6px;
+    padding: 1px 5px; border-radius: 3px; text-transform: uppercase; flex-shrink: 0;
     border: 1px solid transparent;
   }
   .diff-badge.easy { background: rgba(79,145,96,0.16); color: #35633f; border-color: rgba(79,145,96,0.4); }
@@ -408,7 +413,7 @@
     display: none; position: absolute; top: 46%; left: 50%; z-index: 3; pointer-events: none;
     transform: translate(-50%,-50%) rotate(-13deg);
     font-family: 'Cinzel', Georgia, serif; font-weight: 700;
-    font-size: 2rem; letter-spacing: 8px; text-transform: uppercase;
+    font-size: 1.5rem; letter-spacing: 5px; text-transform: uppercase;
     padding: 8px 22px; border: 4px double currentColor; border-radius: 6px;
     opacity: 0.34; white-space: nowrap;
   }
@@ -429,7 +434,7 @@
   .kid-card.kid-3.done .done-banner { color: var(--i3); }
 
   /* ── GRADING, INLINE ON THE CONTRACT ────────────────────────── */
-  .grade-inline { padding: 16px 20px 20px; border-top: 2px double rgba(120,92,48,0.35); margin-top: 6px; }
+  .grade-inline { padding: 12px 14px 15px; border-top: 2px double rgba(120,92,48,0.35); margin-top: 5px; }
   .gi-label {
     font-family: 'Cinzel', Georgia, serif; font-weight: 600;
     font-size: 0.62rem; letter-spacing: 2.4px; text-transform: uppercase; color: var(--ink-soft);
@@ -439,8 +444,8 @@
   .gc-summary { font-size: 0.76rem; color: var(--ink-soft); margin-bottom: 13px; font-style: italic; }
   .gc-slider-row { display: flex; align-items: center; gap: 14px; }
   .gc-pct {
-    font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 1.6rem;
-    min-width: 68px; text-align: right; line-height: 1;
+    font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 1.25rem;
+    min-width: 52px; text-align: right; line-height: 1;
   }
   input[type=range].gc-slider {
     -webkit-appearance: none; appearance: none; flex: 1; height: 8px; border-radius: 100px;
@@ -935,6 +940,73 @@
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
     .quest-grid > .kid-card:nth-child(odd), .quest-grid > .kid-card:nth-child(even) { transform: none; }
   }
+
+  /* ── ONE-OFF BONUS ──────────────────────────────────────────── */
+  .gc-bonus {
+    font-family: 'Cinzel', serif; font-weight: 700; font-size: 0.72rem;
+    color: #5c3a86; background: rgba(138,99,184,0.14);
+    border: 1px solid rgba(138,99,184,0.4); border-radius: 100px; padding: 1px 8px;
+  }
+  .pending-card .gc-bonus { color: #c3aae8; background: rgba(138,99,184,0.18); }
+
+  /* ── XP ADJUSTMENT ──────────────────────────────────────────── */
+  .adj-block { margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--stone-2); }
+  .adj-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-family: 'Cinzel', serif; font-weight: 600; font-size: 0.6rem;
+    letter-spacing: 1.8px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 9px;
+  }
+  .adj-toggle {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 1.4px;
+    text-transform: uppercase; padding: 2px 4px;
+  }
+  .adj-toggle:hover { color: var(--brass-lit); }
+  .adj-body { display: none; }
+  .adj-block.open .adj-body { display: block; }
+  .adj-slider-row { display: flex; align-items: center; gap: 12px; }
+  .adj-pct {
+    font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 1.25rem;
+    min-width: 58px; text-align: right; line-height: 1;
+  }
+  .adj-pct.neg { color: var(--ember); }
+  .adj-pct.pos { color: var(--moss); }
+  .adj-pct.zero { color: var(--text-muted); }
+  input[type=range].adj-slider {
+    -webkit-appearance: none; appearance: none; flex: 1; height: 8px; border-radius: 100px;
+    background: linear-gradient(90deg, rgba(191,69,53,0.5), var(--night-2) 50%, rgba(79,145,96,0.5));
+    border: 1px solid var(--stone-2); outline: none; cursor: pointer;
+  }
+  input[type=range].adj-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%;
+    background: radial-gradient(circle at 34% 28%, #f0d071, #c9a227 62%, #8a6f1c);
+    border: 1px solid #6d5713; cursor: pointer; box-shadow: 0 2px 7px rgba(0,0,0,0.55);
+  }
+  input[type=range].adj-slider::-moz-range-thumb {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: radial-gradient(circle at 34% 28%, #f0d071, #c9a227 62%, #8a6f1c);
+    border: 1px solid #6d5713; cursor: pointer;
+  }
+  .adj-preview { margin-top: 11px; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+  .adj-preview b { color: var(--text); }
+  .adj-preview .drop { color: var(--ember); }
+  .adj-preview .rise { color: var(--moss); }
+  .adj-actions { display: flex; gap: 7px; margin-top: 11px; flex-wrap: wrap; }
+  .adj-actions .input-sm { flex: 1; min-width: 110px; }
+  .btn-adj {
+    border: 1px solid var(--stone-2); background: var(--night-2); color: var(--text);
+    border-radius: var(--radius); padding: 9px 14px; cursor: pointer;
+    font-family: 'Cinzel', Georgia, serif; font-weight: 700; font-size: 0.7rem;
+    letter-spacing: 1.4px; text-transform: uppercase; transition: all 0.15s;
+  }
+  .btn-adj:hover:not(:disabled) { border-color: var(--brass); color: var(--brass-lit); }
+  .btn-adj:disabled { opacity: 0.35; cursor: not-allowed; }
+  .adj-log { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .adj-entry { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; }
+  .adj-entry-amt { font-family: 'Cinzel', serif; font-weight: 700; min-width: 58px; }
+  .adj-entry-amt.neg { color: var(--ember); }
+  .adj-entry-amt.pos { color: var(--moss); }
+  .adj-entry-note { flex: 1; min-width: 0; color: var(--text-muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -1117,6 +1189,10 @@
           <input class="input-sm" type="number" id="setPerfectXp" min="1" max="10000" step="5">
         </div>
         <div class="num-row">
+          <label for="setExtraXp">Bonus xp per one-off point</label>
+          <input class="input-sm" type="number" id="setExtraXp" min="0" max="500" step="1">
+        </div>
+        <div class="num-row">
           <label for="setCurrency">Currency symbol</label>
           <input class="input-sm" type="text" id="setCurrency" maxlength="4" style="width:92px">
         </div>
@@ -1275,13 +1351,14 @@ const DEFAULT_GROUP_REWARDS = [
 const DEFAULT_SETTINGS = {
   breakEvenPct: 70,      // slider % at which XP delta is exactly 0
   xpPerfectDay: 120,     // XP for a flawless (100%) day
+  xpPerExtraPoint: 8,    // bonus XP per point of a completed one-off task
   currency: 'R$',
   editWindowDays: 7,     // how far back a committed day may be re-graded
   rewards: DEFAULT_REWARDS,
   groupRewards: DEFAULT_GROUP_REWARDS,
 };
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[]};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[],adjustments:[]};
 
 function loadState(){
   try{
@@ -1325,6 +1402,7 @@ function loadState(){
       state.settings = mergeSettings(p.settings);
       state.dayLog   = Array.isArray(p.dayLog) ? p.dayLog : [];
       state.ledger   = Array.isArray(p.ledger) ? p.ledger : [];
+      state.adjustments = Array.isArray(p.adjustments) ? p.adjustments : [];
       if(normalizeIds()) migrated=true;
       recalcAllXp();
 
@@ -1341,6 +1419,7 @@ function loadState(){
   state.settings=mergeSettings(null);
   state.dayLog=[];
   state.ledger=[];
+  state.adjustments=[];
   normalizeIds();
   recalcAllXp();
 }
@@ -1352,6 +1431,7 @@ function mergeSettings(stored){
   if(!Array.isArray(s.groupRewards)||!s.groupRewards.length)   s.groupRewards=DEFAULT_GROUP_REWARDS.map(g=>({...g}));
   s.breakEvenPct=clampNum(s.breakEvenPct,1,99,DEFAULT_SETTINGS.breakEvenPct);
   s.xpPerfectDay=clampNum(s.xpPerfectDay,1,10000,DEFAULT_SETTINGS.xpPerfectDay);
+  s.xpPerExtraPoint=clampNum(s.xpPerExtraPoint,0,500,DEFAULT_SETTINGS.xpPerExtraPoint);
   s.editWindowDays=clampNum(s.editWindowDays,0,365,DEFAULT_SETTINGS.editWindowDays);
   return s;
 }
@@ -1431,7 +1511,7 @@ function saveState(){
     kids:state.kids,rooms:state.rooms,assignments:state.assignments,
     today:state.today,fewerHistory:state.fewerHistory,dishRotation:state.dishRotation,
     migrations:state.migrations,settings:state.settings,dayLog:state.dayLog,
-    ledger:state.ledger
+    ledger:state.ledger, adjustments:state.adjustments
   }));
 }
 
@@ -1485,6 +1565,22 @@ function levelProgressPct(xp){
 /* ---- multiplier -> XP ----
    Two-segment linear curve pinned at the break-even point.
    Gain and loss both cap at +/- xpPerfectDay.                       */
+/* One-off tasks pay on top of the day's mark, in proportion to how hard
+   they were — but only the ones actually ticked, and scaled by the mark,
+   so a sloppy car wash is worth less than a thorough one. */
+function extraXpFor(row){
+  if(!row) return 0;
+  const pts=Number(row.extraPts)||0;
+  if(pts<=0) return 0;
+  const m=Math.min(1,Math.max(0,Number(row.multiplier)??1));
+  return Math.round(pts*state.settings.xpPerExtraPoint*m);
+}
+/* Everything a kid earns for one day: the graded mark plus one-off bonuses. */
+function dayXpFor(row){
+  if(!row) return 0;
+  return xpDeltaFor(row.multiplier)+extraXpFor(row);
+}
+
 function xpDeltaFor(mult){
   const b=state.settings.breakEvenPct/100;
   const P=state.settings.xpPerfectDay;
@@ -1507,35 +1603,91 @@ function committedDaysSorted(){
 }
 
 /* ---- replay ---- */
+/* Sealed days and manual adjustments replayed together in the order they
+   actually happened, so an adjustment made on Tuesday sits between Monday's
+   and Tuesday's marks rather than being tacked on at the end. */
+function xpTimeline(){
+  const events=[];
+  committedDaysSorted().forEach(day=>{
+    const at=isoToDate(day.date).getTime()+86399999;   // end of that day
+    for(const kidId in day.kids) events.push({at,kidId,row:day.kids[kidId]});
+  });
+  (state.adjustments||[]).forEach(a=>events.push({at:a.ts,kidId:a.kidId,adj:a}));
+  events.sort((x,y)=>x.at-y.at);
+  return events;
+}
+
 function recalcAllXp(){
   const xp={};
   state.kids.forEach(k=>{ xp[k.id]=0; });
-  for(const day of committedDaysSorted()){
-    for(const kidId in day.kids){
-      if(xp[kidId]===undefined) continue;          // kid was removed
-      const row=day.kids[kidId];
-      const before=xp[kidId];
-      const delta=xpDeltaFor(row.multiplier);
-      const after=Math.max(0,before+delta);        // clamp at 0, never negative
-      row.xpDelta=delta;
-      row.xpAfter=after;
-      row.levelBefore=levelFromXp(before);
-      row.levelAfter=levelFromXp(after);
-      xp[kidId]=after;
+  for(const ev of xpTimeline()){
+    if(xp[ev.kidId]===undefined) continue;             // kid was removed
+    const before=xp[ev.kidId];
+    const delta=ev.adj?Math.round(ev.adj.amount):dayXpFor(ev.row);
+    const after=Math.max(0,before+delta);              // clamp at 0, never negative
+    if(ev.row){
+      ev.row.xpDelta=delta;
+      ev.row.xpBonus=extraXpFor(ev.row);
+      ev.row.xpAfter=after;
+      ev.row.levelBefore=levelFromXp(before);
+      ev.row.levelAfter=levelFromXp(after);
+    } else {
+      ev.adj.xpAfter=after;
+      ev.adj.levelBefore=levelFromXp(before);
+      ev.adj.levelAfter=levelFromXp(after);
     }
+    xp[ev.kidId]=after;
   }
   state.kids.forEach(k=>{ k.xp=xp[k.id]||0; });
+}
+
+/* ---- manual XP adjustments ----
+   Expressed as a percentage of the kid's current XP so the sting scales
+   with how much they have to lose. Stored as the resolved XP amount. */
+function adjustmentAmount(kid, pct){
+  return Math.round((kid.xp||0)*(pct/100));
+}
+function previewAdjustment(kid, pct){
+  const amount=adjustmentAmount(kid,pct);
+  const after=Math.max(0,(kid.xp||0)+amount);
+  return{amount, after,
+         levelBefore:levelFromXp(kid.xp||0),
+         levelAfter:levelFromXp(after)};
+}
+function applyAdjustment(kidId, pct, note){
+  const kid=state.kids.find(k=>k.id===kidId);
+  if(!kid||!pct) return null;
+  const before=levelFromXp(kid.xp||0);
+  const a={id:newId('adj'), kidId, pct, amount:adjustmentAmount(kid,pct),
+           iso:todayISO(), ts:Date.now(), note:note||''};
+  state.adjustments.push(a);
+  recalcAllXp(); saveState();
+  return{adj:a, levelBefore:before, levelAfter:levelFromXp(kid.xp||0)};
+}
+function removeAdjustment(id){
+  const i=state.adjustments.findIndex(a=>a.id===id);
+  if(i<0) return;
+  state.adjustments.splice(i,1);
+  recalcAllXp(); saveState();
+}
+function recentAdjustments(kidId, limit){
+  return state.adjustments.filter(a=>a.kidId===kidId)
+    .sort((a,b)=>b.ts-a.ts).slice(0,limit||4);
 }
 
 /* ---- suggestion from the done checkboxes (links completion to grading) ---- */
 function dayPtsForKid(kid){
   const gi=state.kids.indexOf(kid);
   const tasks=(state.assignments&&state.today===new Date().toDateString())?(state.assignments[gi]||[]):[];
-  const assignedPts=tasks.reduce((s,t)=>s+t.pts,0);
-  const completedPts=tasks.filter(t=>t.done).reduce((s,t)=>s+t.pts,0);
-  return{assignedPts,completedPts,
-         assignedCount:tasks.length,
-         completedCount:tasks.filter(t=>t.done).length};
+  const done=tasks.filter(t=>t.done);
+  return{
+    assignedPts:tasks.reduce((s,t)=>s+t.pts,0),
+    completedPts:done.reduce((s,t)=>s+t.pts,0),
+    assignedCount:tasks.length,
+    completedCount:done.length,
+    extraPts:done.filter(t=>t.extra).reduce((s,t)=>s+t.pts,0),
+    extraCount:tasks.filter(t=>t.extra).length
+  };
 }
 /* Purely what the checkboxes say for that day. */
 function ticksMultiplier(kid, iso){
@@ -1563,14 +1715,23 @@ function commitDay(iso, grades){
 
   const day=getOrCreateDay(iso);
   day.committed=true;
+  const isToday=(iso===todayISO());
   for(const kidId in grades){
     const kid=state.kids.find(k=>k.id===kidId);
     if(!kid) continue;
-    const snap=dayPtsForKid(kid);
+    const prev=day.kids[kidId]||{};
+    // Only today has live task data. A past day keeps the snapshot it
+    // recorded while it was live, rather than being overwritten with zeros.
+    const snap=isToday?dayPtsForKid(kid):{};
     day.kids[kidId]={
+      ...prev, ...snap,
       multiplier: Math.min(1,Math.max(0,Number(grades[kidId])||0)),
-      assignedPts: snap.assignedPts,
-      completedPts: snap.completedPts,
+      assignedPts:   snap.assignedPts   ?? prev.assignedPts   ?? 0,
+      completedPts:  snap.completedPts  ?? prev.completedPts  ?? 0,
+      assignedCount: snap.assignedCount ?? prev.assignedCount ?? 0,
+      completedCount:snap.completedCount?? prev.completedCount?? 0,
+      extraPts:      snap.extraPts      ?? prev.extraPts      ?? 0,
+      extraCount:    snap.extraCount    ?? prev.extraCount    ?? 0,
     };
   }
   recalcAllXp();
@@ -1664,6 +1825,37 @@ function playCheck(){tone(523,'sine',0.1,0.25);tone(784,'sine',0.15,0.3,0.08);}
 function playUncheck(){tone(400,'sine',0.12,0.2);}
 function playComplete(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,'sine',0.3,0.35,i*0.1));}
 function playAllDone(){[523,659,784,1047,1319,1047,784,1047].forEach((f,i)=>tone(f,'sine',0.35,0.4,i*0.13));}
+
+/* A brass fanfare for a rank gained: rising call, then a held major chord. */
+function playFanfare(){
+  resumeAC();
+  [[392,0],[523,0.13],[659,0.26],[784,0.39]].forEach(([f,d])=>{
+    tone(f,'triangle',0.26,0.32,d);
+    tone(f*2,'sine',0.22,0.12,d);
+  });
+  [784,988,1175,1568].forEach(f=>{ tone(f,'triangle',1.15,0.2,0.56); tone(f/2,'sine',1.15,0.1,0.56); });
+  tone(196,'sine',1.3,0.22,0.56);
+}
+/* A rank lost: the same shape, falling and minor. No sting, no shame. */
+function playRankLost(){
+  [523,440,392,330].forEach((f,i)=>tone(f,'sine',0.3,0.16,i*0.13));
+  tone(165,'sine',0.7,0.12,0.5);
+}
+/* Wax pressed to paper: a dull thud, then the ring of the stamp. */
+function playSeal(){
+  resumeAC();
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.connect(g);g.connect(AC.destination);
+  o.type='sine';
+  o.frequency.setValueAtTime(160,AC.currentTime);
+  o.frequency.exponentialRampToValueAtTime(52,AC.currentTime+0.16);
+  g.gain.setValueAtTime(0.4,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+0.2);
+  o.start();o.stop(AC.currentTime+0.21);
+  tone(1046,'sine',0.4,0.14,0.1); tone(1568,'sine',0.35,0.09,0.13);
+}
+function playCoin(){ [988,1319].forEach((f,i)=>tone(f,'square',0.09,0.13,i*0.06)); tone(1568,'sine',0.22,0.1,0.11); }
+function playPenalty(){ tone(233,'sawtooth',0.2,0.14); tone(174,'sawtooth',0.35,0.13,0.16); }
 
 /* CALC */
 function getActiveKids(){return state.kids.filter(k=>k.active);}
@@ -2040,9 +2232,9 @@ function checkAllDone(){
   }
 }
 
-function spawnConfetti(){
-  const cols=['#f4c842','#ff6b6b','#6ba3ff','#c56bff','#6bffb8'];
-  for(let i=0;i<80;i++){
+function spawnConfetti(n){
+  const cols=['#f0d071','#c9a227','#d4596c','#5b9ad6','#a678d8','#63ad76','#f7e6bd'];
+  for(let i=0;i<(n||80);i++){
     const el=document.createElement('div');
     el.className='confetti-piece';
     el.style.cssText=`left:${Math.random()*100}vw;top:-20px;background:${cols[Math.floor(Math.random()*cols.length)]};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;animation-delay:${Math.random()*1.5}s;animation-duration:${2+Math.random()*2}s;`;
@@ -2411,11 +2603,12 @@ function isWeekPaid(key){ return state.ledger.some(t=>t.kind==='allowance'&&t.we
 
 /* Replay XP up to and including a date, so historic levels are exact. */
 function xpAtDate(kidId, iso){
+  const cutoff=isoToDate(iso).getTime()+86399999;
   let xp=0;
-  for(const day of committedDaysSorted()){
-    if(day.date>iso) break;
-    const row=day.kids[kidId];
-    if(row) xp=Math.max(0,xp+xpDeltaFor(row.multiplier));
+  for(const ev of xpTimeline()){
+    if(ev.at>cutoff) break;
+    if(ev.kidId!==kidId) continue;
+    xp=Math.max(0,xp+(ev.adj?Math.round(ev.adj.amount):dayXpFor(ev.row)));
   }
   return xp;
 }
@@ -2467,7 +2660,8 @@ function touchTodayLog(){
     const prev=day.kids[kid.id]||{};
     day.kids[kid.id]={...prev,
       assignedPts:live.assignedPts, completedPts:live.completedPts,
-      assignedCount:live.assignedCount, completedCount:live.completedCount};
+      assignedCount:live.assignedCount, completedCount:live.completedCount,
+      extraPts:live.extraPts, extraCount:live.extraCount};
   });
 }
 
@@ -2702,8 +2896,11 @@ function renderGradePreview(el, iso, kid){
   const mult=draftFor(iso)[kid.id]??1;
   const day=getDay(iso);
   const stored=(day&&day.committed&&day.kids[kid.id])?day.kids[kid.id]:null;
-  const newDelta=xpDeltaFor(mult);
-  const shift=newDelta-(stored?xpDeltaFor(stored.multiplier):0);
+  const row=dayRowFor(iso,kid)||{};
+  const probe={...row, multiplier:mult};
+  const bonus=extraXpFor(probe);
+  const newDelta=xpDeltaFor(mult)+bonus;
+  const shift=newDelta-(stored?dayXpFor(stored):0);
   const projected=Math.max(0,kid.xp+shift);
   const lvlNow=levelFromXp(kid.xp), lvlNew=levelFromXp(projected);
   const cls=newDelta>0?'up':newDelta<0?'down':'flat';
@@ -2711,9 +2908,10 @@ function renderGradePreview(el, iso, kid){
   if(lvlNew>lvlNow) move=`<span style="color:var(--moss)">▲ LEVEL UP → ${esc(levelTitle(lvlNew))}</span>`;
   else if(lvlNew<lvlNow) move=`<span style="color:var(--ember)">▼ drops to ${esc(levelTitle(lvlNew))}</span>`;
   else if(lvlNew>=MAX_LEVEL) move='Max level';
-  else move=`${xpForLevel(lvlNew+1)-projected} XP to ${esc(levelTitle(lvlNew+1))}`;
-  el.innerHTML=`<span class="gc-delta ${cls}">${newDelta>0?'+':''}${newDelta} XP</span>
-    <span class="gc-outcome">→ ${projected} XP · Lvl ${lvlNew} · ${move}</span>`;
+  else move=`${xpForLevel(lvlNew+1)-projected} xp to ${esc(levelTitle(lvlNew+1))}`;
+  el.innerHTML=`<span class="gc-delta ${cls}">${newDelta>0?'+':''}${newDelta} xp</span>`+
+    (bonus>0?`<span class="gc-bonus">${probe.extraPts} one-off pts · +${bonus}</span>`:'')+
+    `<span class="gc-outcome">→ ${projected} xp · rank ${lvlNew} · ${move}</span>`;
 }
 
 /* PIN-gated commit. onDone lets each caller re-render its own surface. */
@@ -2732,7 +2930,7 @@ function commitDayUI(iso, kids, onDone){
     renderHome();
     if(onDone) onDone();
     queueLevelCards([...levelUps.map(x=>({...x,dir:'up'})),...levelDowns.map(x=>({...x,dir:'down'}))]);
-    if(!levelUps.length&&!levelDowns.length){ playCheck(); showToast('Day confirmed. XP awarded.'); }
+    if(!levelUps.length&&!levelDowns.length){ playSeal(); showToast('Day sealed. Experience awarded.'); }
   });
 }
 
@@ -2782,7 +2980,25 @@ function renderDashboard(){
         <button class="btn-money add">＋</button>
         <button class="btn-money spend">－</button>
       </div>
-      <div class="tx-list"></div>`;
+      <div class="tx-list"></div>
+      <div class="adj-block">
+        <div class="adj-head">
+          <span>Experience</span>
+          <button class="adj-toggle">Adjust</button>
+        </div>
+        <div class="adj-body">
+          <div class="adj-slider-row">
+            <input type="range" class="adj-slider" min="-50" max="50" step="5" value="0">
+            <span class="adj-pct zero">0%</span>
+          </div>
+          <div class="adj-preview"></div>
+          <div class="adj-actions">
+            <input class="input-sm adj-note" type="text" placeholder="Why? (e.g. broke a rule)">
+            <button class="btn-adj" disabled>Apply</button>
+          </div>
+          <div class="adj-log"></div>
+        </div>
+      </div>`;
     grid.appendChild(card);
 
     const amt=card.querySelector('.amt'), note=card.querySelector('.note');
@@ -2792,12 +3008,73 @@ function renderDashboard(){
       playClick();
       requirePin(()=>{
         addTx(kid.id, sign*v, note.value.trim()||(sign>0?'Added':'Spent'), sign>0?'bonus':'spend');
-        saveState(); renderDashboard();
+        saveState(); renderDashboard(); playCoin();
         showToast(`${sign>0?'Added':'Spent'} ${formatMoney(v)} · ${kid.name}`);
       });
     };
     card.querySelector('.add').addEventListener('click',()=>doTx(1));
     card.querySelector('.spend').addEventListener('click',()=>doTx(-1));
+
+    // ---- experience adjustment ----
+    const adjBlock=card.querySelector('.adj-block');
+    const adjSlider=adjBlock.querySelector('.adj-slider');
+    const adjPct=adjBlock.querySelector('.adj-pct');
+    const adjPrev=adjBlock.querySelector('.adj-preview');
+    const adjNote=adjBlock.querySelector('.adj-note');
+    const adjApply=adjBlock.querySelector('.btn-adj');
+    const paintAdj=()=>{
+      const pct=Number(adjSlider.value);
+      adjPct.textContent=(pct>0?'+':'')+pct+'%';
+      adjPct.className='adj-pct '+(pct<0?'neg':pct>0?'pos':'zero');
+      adjApply.disabled=(pct===0);
+      if(!pct){ adjPrev.innerHTML='Slide to take experience away, or to give some back.'; return; }
+      const p=previewAdjustment(kid,pct);
+      const verb=p.amount<0?'loses':'gains';
+      const cls=p.amount<0?'drop':'rise';
+      let rank;
+      if(p.levelAfter<p.levelBefore) rank=`<span class="drop">falls to rank ${p.levelAfter} · ${esc(levelTitle(p.levelAfter))}</span>`;
+      else if(p.levelAfter>p.levelBefore) rank=`<span class="rise">rises to rank ${p.levelAfter} · ${esc(levelTitle(p.levelAfter))}</span>`;
+      else rank=`stays rank ${p.levelAfter} · ${esc(levelTitle(p.levelAfter))}`;
+      adjPrev.innerHTML=`${esc(kid.name)} ${verb} <b class="${cls}">${Math.abs(p.amount)} xp</b> — `+
+        `${kid.xp} → <b>${p.after}</b>, ${rank}.`;
+    };
+    adjBlock.querySelector('.adj-toggle').addEventListener('click',()=>{
+      playClick(); adjBlock.classList.toggle('open'); paintAdj();
+    });
+    adjSlider.addEventListener('input',paintAdj);
+    adjApply.addEventListener('click',()=>{
+      const pct=Number(adjSlider.value);
+      if(!pct) return;
+      playClick();
+      requirePin(()=>{
+        const res=applyAdjustment(kid.id,pct,adjNote.value.trim());
+        if(!res) return;
+        renderHome(); renderDashboard();
+        if(res.levelAfter<res.levelBefore){
+          queueLevelCards([{kid,from:res.levelBefore,to:res.levelAfter,dir:'down'}]);
+        } else if(res.levelAfter>res.levelBefore){
+          queueLevelCards([{kid,from:res.levelBefore,to:res.levelAfter,dir:'up'}]);
+        } else {
+          pct<0?playPenalty():playCheck();
+          showToast(`${kid.name} ${pct<0?'loses':'gains'} ${Math.abs(res.adj.amount)} xp.`);
+        }
+      });
+    });
+    const adjLog=adjBlock.querySelector('.adj-log');
+    recentAdjustments(kid.id,4).forEach(a=>{
+      const row=document.createElement('div');
+      row.className='adj-entry';
+      row.innerHTML=`<span class="adj-entry-amt ${a.amount<0?'neg':'pos'}">${a.amount>0?'+':''}${a.amount} xp</span>
+        <span class="adj-entry-note">${esc(a.note||((a.pct>0?'+':'')+a.pct+'%'))}</span>
+        <button class="tx-del" title="Undo">✕</button>`;
+      row.querySelector('.tx-del').addEventListener('click',()=>{
+        playClick();
+        requirePin(()=>{ removeAdjustment(a.id); renderHome(); renderDashboard(); showToast('Adjustment undone.'); });
+      });
+      adjLog.appendChild(row);
+    });
+    if(recentAdjustments(kid.id,1).length) adjBlock.classList.add('open');
+    paintAdj();
 
     const list=card.querySelector('.tx-list');
     const rows=walletTx(kid.id,6);
@@ -2838,7 +3115,7 @@ function renderPayoutPanel(){
       playClick();
       requirePin(()=>{
         const paid=payWeek(d.key);
-        playComplete(); renderDashboard();
+        playCoin(); setTimeout(playCoin,140); renderDashboard();
         showToast(`Allowance paid · ${formatMoney(paid)}`);
       });
     });
@@ -2905,7 +3182,7 @@ function showNextLevelCard(){
     </div>
     <button class="btn-lu" id="luNextBtn">${levelQueue.length?'Next →':'Continue'}</button>`;
   ov.classList.add('open');
-  if(up){ playComplete(); spawnConfetti(); } else { tone(300,'sine',0.18,0.16); }
+  if(up){ playFanfare(); spawnConfetti(160); } else { playRankLost(); }
   document.getElementById('luNextBtn').addEventListener('click',()=>{ playClick(); showNextLevelCard(); });
 }
 
@@ -3291,6 +3568,8 @@ function renderXpSettings(){
   if(!be) return;
   be.value=state.settings.breakEvenPct;
   px.value=state.settings.xpPerfectDay;
+  const ex=document.getElementById('setExtraXp');
+  if(ex) ex.value=state.settings.xpPerExtraPoint;
   cu.value=state.settings.currency;
   ew.value=state.settings.editWindowDays;
   updateXpCurveHint();
@@ -3307,9 +3586,10 @@ function updateXpCurveHint(){
     const days=d>0?Math.ceil(need/d):null;
     return `${Math.round(m*100)}% → ${d>0?'+':''}${d} XP/day (${days?days+' days':'never'} to Champion)`;
   });
-  el.innerHTML='Break-even is the slider position worth exactly 0 XP. Below it, XP is lost.<br>'+
+  el.innerHTML='Break-even is the slider position worth exactly 0 xp. Below it, experience is lost.<br>'+
     rows.join('<br>')+
-    `<br><br>Level 8 (Champion) needs ${need} XP. Changing these values rewrites every past day on recalculation.`;
+    `<br><br>Rank 8 (Champion) needs ${need} xp. A one-off task adds ${state.settings.xpPerExtraPoint} xp per point on top, `+
+    `so a 5-point job done well is worth ${5*state.settings.xpPerExtraPoint} xp. Changing any of these rewrites every past day on recalculation.`;
 }
 
 function bindXpSettings(){
@@ -3338,6 +3618,13 @@ function bindXpSettings(){
     ew.value=state.settings.editWindowDays; saveState();
   });
 
+  const ex=document.getElementById('setExtraXp');
+  if(ex) ex.addEventListener('change',()=>{
+    state.settings.xpPerExtraPoint=clampNum(ex.value,0,500,DEFAULT_SETTINGS.xpPerExtraPoint);
+    ex.value=state.settings.xpPerExtraPoint;
+    recalcAllXp(); saveState(); updateXpCurveHint(); renderHome();
+  });
+
   document.getElementById('recalcXpBtn').addEventListener('click',()=>{
     playClick(); recalcAllXp(); saveState(); renderHome(); updateXpCurveHint();
     showToast('XP recalculated from the full history.');
@@ -3346,6 +3633,7 @@ function bindXpSettings(){
     playClick();
     if(!confirm('Wipe all XP and graded days? Every kid returns to Level 0. This cannot be undone.')) return;
     state.dayLog=[];
+    state.adjustments=[];
     state.kids.forEach(k=>{ k.xp=0; });
     saveState(); renderHome(); updateXpCurveHint();
     showToast('All XP reset. Everyone starts at Wanderer.');
