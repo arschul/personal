@@ -2787,13 +2787,11 @@ function submitExtraTask(){
   if(!name){ showToast('Give the task a name.'); return; }
   if(!extraKidSel.size){ showToast('Pick at least one kid.'); return; }
   playClick();
-  requirePin(()=>{
-    const n=addExtraTask(name,extraPts,[...extraKidSel]);
-    closeExtraModal();
-    renderQuest();
-    playLand();
-    showToast(`"${name}" added to ${n} kid${n>1?'s':''}.`);
-  });
+  const n=addExtraTask(name,extraPts,[...extraKidSel]);
+  closeExtraModal();
+  renderQuest();
+  playLand();
+  showToast(`"${name}" added to ${n} kid${n>1?'s':''}.`);
 }
 
 /* ── GRADING ──────────────────────────────────────────────────────
@@ -3459,7 +3457,14 @@ document.getElementById('rollBtn').addEventListener('click',()=>{
   }
 });
 
-document.getElementById('extraBtn').addEventListener('click',()=>{playClick();openExtraModal();});
+document.getElementById('extraBtn').addEventListener('click',()=>{
+  playClick();
+  if(!state.assignments||state.today!==new Date().toDateString()){
+    showToast('Post today\'s quests first.');
+    return;
+  }
+  requirePin(()=>openExtraModal());
+});
 document.getElementById('closeExtra').addEventListener('click',()=>{playClick();closeExtraModal();});
 document.getElementById('addExtraBtn').addEventListener('click',submitExtraTask);
 document.getElementById('extraName').addEventListener('keydown',e=>{ if(e.key==='Enter') submitExtraTask(); });
