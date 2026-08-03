@@ -1200,7 +1200,13 @@
           <label for="setEditWindow">Days a graded day stays editable</label>
           <input class="input-sm" type="number" id="setEditWindow" min="0" max="365" step="1">
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+        <div class="num-row" style="margin-top:16px">
+          <label for="setRankAll">Move everyone to rank</label>
+          <select class="select-pts" id="setRankAll" style="min-width:170px"></select>
+          <button class="btn-sm primary" id="applyRankAllBtn">Apply</button>
+        </div>
+        <div class="settings-hint" id="rankAllHint" style="margin-top:0"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
           <button class="btn-sm primary" id="recalcXpBtn">↻ Recalculate All XP</button>
           <button class="btn-sm" id="resetXpBtn" style="border-color:var(--ember);color:var(--ember)">🗑 Reset All XP</button>
         </div>
@@ -1664,6 +1670,28 @@ function applyAdjustment(kidId, pct, note){
   recalcAllXp(); saveState();
   return{adj:a, levelBefore:before, levelAfter:levelFromXp(kid.xp||0)};
 }
+/* Put every active member on a given rank, at that rank's floor.
+   Recorded as one adjustment each, so it replays like any other change
+   and can be undone from the Ledger. */
+function setEveryoneToLevel(lvl){
+  lvl=Math.min(MAX_LEVEL,Math.max(0,Math.round(lvl)));
+  const target=xpForLevel(lvl);
+  const moved=[];
+  const ts=Date.now();
+  getActiveKids().forEach((kid,i)=>{
+    const amount=target-(kid.xp||0);
+    if(!amount) return;
+    const before=levelFromXp(kid.xp||0);
+    state.adjustments.push({
+      id:newId('adj'), kidId:kid.id, pct:null, amount,
+      iso:todayISO(), ts:ts+i, note:`Set to rank ${lvl} · ${rewardsAt(lvl).title}`
+    });
+    moved.push({kid, amount, before, after:lvl});
+  });
+  if(moved.length){ recalcAllXp(); saveState(); }
+  return moved;
+}
+
 function removeAdjustment(id){
   const i=state.adjustments.findIndex(a=>a.id===id);
   if(i<0) return;
@@ -3583,6 +3611,16 @@ function renderXpSettings(){
   if(ex) ex.value=state.settings.xpPerExtraPoint;
   cu.value=state.settings.currency;
   ew.value=state.settings.editWindowDays;
+  const sel=document.getElementById('setRankAll');
+  if(sel && !sel.options.length){
+    state.settings.rewards.forEach(r=>{
+      const o=document.createElement('option');
+      o.value=r.lvl; o.textContent=`${r.lvl} — ${r.title}`;
+      sel.appendChild(o);
+    });
+    sel.value=3;
+  }
+  updateRankAllHint();
   updateXpCurveHint();
 }
 
@@ -3601,6 +3639,24 @@ function updateXpCurveHint(){
     rows.join('<br>')+
     `<br><br>Rank 8 (Champion) needs ${need} xp. A one-off task adds ${state.settings.xpPerExtraPoint} xp per point on top, `+
     `so a 5-point job done well is worth ${5*state.settings.xpPerExtraPoint} xp. Changing any of these rewrites every past day on recalculation.`;
+}
+
+function updateRankAllHint(){
+  const el=document.getElementById('rankAllHint');
+  const sel=document.getElementById('setRankAll');
+  if(!el||!sel) return;
+  const lvl=Number(sel.value)||0;
+  const target=xpForLevel(lvl);
+  const act=getActiveKids();
+  if(!act.length){ el.textContent='No one is answering the call right now.'; return; }
+  const ups=act.filter(k=>(k.xp||0)<target).length;
+  const downs=act.filter(k=>(k.xp||0)>target).length;
+  const bits=[];
+  if(ups) bits.push(`${ups} would rise`);
+  if(downs) bits.push(`${downs} would drop`);
+  if(!bits.length) bits.push('everyone is already there');
+  el.textContent=`Sets all ${act.length} active members to ${target} xp — the floor of rank ${lvl}. `+
+    bits.join(', ')+'. Recorded as an adjustment each, so it can be undone from the Ledger.';
 }
 
 function bindXpSettings(){
@@ -3634,6 +3690,28 @@ function bindXpSettings(){
     state.settings.xpPerExtraPoint=clampNum(ex.value,0,500,DEFAULT_SETTINGS.xpPerExtraPoint);
     ex.value=state.settings.xpPerExtraPoint;
     recalcAllXp(); saveState(); updateXpCurveHint(); renderHome();
+  });
+
+  const sel=document.getElementById('setRankAll');
+  if(sel) sel.addEventListener('change',updateRankAllHint);
+  const applyRank=document.getElementById('applyRankAllBtn');
+  if(applyRank) applyRank.addEventListener('click',()=>{
+    playClick();
+    const lvl=Number(document.getElementById('setRankAll').value)||0;
+    const act=getActiveKids();
+    if(!act.length){ showToast('No active members to move.'); return; }
+    const target=xpForLevel(lvl);
+    const willDrop=act.filter(k=>(k.xp||0)>target);
+    const msg=willDrop.length
+      ? `Move all ${act.length} members to rank ${lvl}? ${willDrop.map(k=>k.name).join(', ')} would LOSE experience.`
+      : `Move all ${act.length} members to rank ${lvl} (${target} xp)?`;
+    if(!confirm(msg)) return;
+    const moved=setEveryoneToLevel(lvl);
+    renderHome(); updateRankAllHint(); updateXpCurveHint();
+    if(!moved.length){ showToast(`Everyone is already at rank ${lvl}.`); return; }
+    if(moved.some(m=>m.after>m.before)){ playFanfare(); spawnConfetti(120); }
+    else playSeal();
+    showToast(`${moved.length} member${moved.length>1?'s':''} moved to rank ${lvl} · ${rewardsAt(lvl).title}.`);
   });
 
   document.getElementById('recalcXpBtn').addEventListener('click',()=>{
