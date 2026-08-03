@@ -3331,19 +3331,22 @@ function openPinModal(mode, callback){
   document.getElementById('pinError').textContent='';
   updatePinDots();
   if(mode==='verify'){
-    document.getElementById('pinTitle').textContent='🔐 Parent PIN';
-    document.getElementById('pinSub').textContent='Enter your 4-digit PIN to continue';
+    document.getElementById('pinTitle').textContent='The Guild Seal';
+    document.getElementById('pinSub').textContent='Press your four-digit seal to continue';
   } else if(mode==='set-new'){
-    document.getElementById('pinTitle').textContent='🔐 Set a PIN';
-    document.getElementById('pinSub').textContent='Choose a new 4-digit PIN';
+    document.getElementById('pinTitle').textContent='Set the Seal';
+    document.getElementById('pinSub').textContent='Choose a four-digit seal';
   } else if(mode==='confirm-new'){
-    document.getElementById('pinTitle').textContent='🔐 Confirm PIN';
-    document.getElementById('pinSub').textContent='Enter the same PIN again';
+    document.getElementById('pinTitle').textContent='Confirm the Seal';
+    document.getElementById('pinSub').textContent='Press the same four digits again';
   }
   document.getElementById('pin-overlay').classList.add('open');
 }
 
-function closePinModal(){ document.getElementById('pin-overlay').classList.remove('open'); pinBuffer=''; }
+function closePinModal(){
+  document.getElementById('pin-overlay').classList.remove('open');
+  pinBuffer=''; pinCallback=null; pinMode=null;
+}
 
 function updatePinDots(){
   for(let i=0;i<4;i++){
@@ -3382,11 +3385,14 @@ function pinDel(){
 function pinCancel(){ tone(300,'sine',0.08,0.15); closePinModal(); }
 
 function pinSubmit(){
+  // nothing is pending unless the pad is actually open
+  if(!document.getElementById('pin-overlay').classList.contains('open')) return;
   if(pinMode==='verify'){
     if(pinBuffer===getStoredPin()){
       tone(784,'sine',0.12,0.3); tone(1047,'sine',0.15,0.35,0.1);
+      const cb=pinCallback;          // closePinModal disarms it
       closePinModal();
-      if(pinCallback) pinCallback();
+      if(cb) cb();
     } else {
       pinErrorShake('Wrong PIN. Try again.');
     }
