@@ -554,7 +554,7 @@
     font-size: 0.4rem; letter-spacing: 1.2px; text-transform: uppercase;
     color: rgba(42,20,16,0.7); margin-top: 1px;
   }
-  .dc-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-top: 14px; }
+  .dc-stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 5px; margin-top: 14px; }
   .dc-stat { background: var(--night-2); border: 1px solid var(--stone-2); border-radius: var(--radius-sm); padding: 8px 4px; text-align: center; }
   .dc-stat-v { font-family: 'Cinzel', serif; font-weight: 700; font-size: 1.05rem; color: var(--brass-lit); }
   .dc-stat-l { font-family: 'Cinzel', serif; font-size: 0.48rem; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-top: 2px; }
@@ -1007,6 +1007,39 @@
   .adj-entry-amt.neg { color: var(--ember); }
   .adj-entry-amt.pos { color: var(--moss); }
   .adj-entry-note { flex: 1; min-width: 0; color: var(--text-muted); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── TRADE LOG ──────────────────────────────────────────────── */
+  .swap-log-card {
+    background: var(--stone); border: 1px solid var(--stone-2); border-radius: var(--radius);
+    padding: 14px 16px; margin-bottom: 26px;
+  }
+  .swap-log-head {
+    font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 1.6px;
+    text-transform: uppercase; color: var(--text-muted); padding-bottom: 10px;
+    border-bottom: 1px solid var(--stone-2); margin-bottom: 4px;
+  }
+  .swap-entry {
+    display: flex; align-items: flex-start; gap: 11px; padding: 10px 0;
+    border-bottom: 1px dotted var(--stone-2);
+  }
+  .swap-entry:last-of-type { border-bottom: none; }
+  .swap-when {
+    font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text-muted); min-width: 62px; padding-top: 3px;
+  }
+  .swap-body { flex: 1; min-width: 0; }
+  .swap-parties { font-family: 'Cinzel', serif; font-weight: 600; font-size: 0.82rem; }
+  .swap-arrow { color: var(--brass); margin: 0 3px; }
+  .swap-detail { font-size: 0.76rem; color: var(--text-muted); margin-top: 3px; line-height: 1.45; }
+  .swap-detail b { color: var(--text); font-weight: 600; }
+  .swap-pt { font-family: 'Cinzel', serif; font-weight: 700; color: var(--brass-dim); font-size: 0.7rem; }
+  .swap-outcome {
+    font-family: 'Cinzel', serif; font-size: 0.56rem; letter-spacing: 1.4px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 100px; white-space: nowrap; margin-top: 2px;
+  }
+  .swap-entry.accepted .swap-outcome { color: var(--moss); border: 1px solid rgba(79,145,96,0.45); background: rgba(79,145,96,0.12); }
+  .swap-entry.refused .swap-outcome { color: var(--ember); border: 1px solid rgba(191,69,53,0.4); background: rgba(191,69,53,0.1); }
+  .swap-log-more { margin-top: 12px; width: 100%; }
 </style>
 </head>
 <body>
@@ -1078,6 +1111,7 @@
       <div id="dashPayout"></div>
       <div id="dashPending"></div>
       <div class="dash-grid" id="dashGrid"></div>
+      <div id="dashSwaps"></div>
       <div id="dashGroup"></div>
     </div>
   </div>
@@ -1364,7 +1398,7 @@ const DEFAULT_SETTINGS = {
   groupRewards: DEFAULT_GROUP_REWARDS,
 };
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[],adjustments:[]};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[],adjustments:[],swapLog:[]};
 
 function loadState(){
   try{
@@ -1409,6 +1443,7 @@ function loadState(){
       state.dayLog   = Array.isArray(p.dayLog) ? p.dayLog : [];
       state.ledger   = Array.isArray(p.ledger) ? p.ledger : [];
       state.adjustments = Array.isArray(p.adjustments) ? p.adjustments : [];
+      state.swapLog     = Array.isArray(p.swapLog) ? p.swapLog : [];
       if(normalizeIds()) migrated=true;
       recalcAllXp();
 
@@ -1426,6 +1461,7 @@ function loadState(){
   state.dayLog=[];
   state.ledger=[];
   state.adjustments=[];
+  state.swapLog=[];
   normalizeIds();
   recalcAllXp();
 }
@@ -1517,7 +1553,7 @@ function saveState(){
     kids:state.kids,rooms:state.rooms,assignments:state.assignments,
     today:state.today,fewerHistory:state.fewerHistory,dishRotation:state.dishRotation,
     migrations:state.migrations,settings:state.settings,dayLog:state.dayLog,
-    ledger:state.ledger, adjustments:state.adjustments
+    ledger:state.ledger, adjustments:state.adjustments, swapLog:state.swapLog
   }));
 }
 
@@ -2495,6 +2531,26 @@ function closeProposal(){
   document.getElementById('proposal-overlay').classList.remove('open');
 }
 
+/* ── TRADE LOG ────────────────────────────────────────────────────
+   Task names are snapshotted because the assignments themselves are
+   ephemeral; kids are stored by id so a rename doesn't rewrite history. */
+function recordSwap(outcome){
+  const i=state.kids[swapState.initiatorGI];
+  const t=state.kids[swapState.targetGI];
+  if(!i||!t) return;
+  state.swapLog.push({
+    id:newId('swap'), ts:Date.now(), iso:todayISO(), outcome,
+    initiatorId:i.id, targetId:t.id,
+    gave:(swapState.selectedTasks||[]).map(x=>({name:x.name,pts:x.pts,room:x.room})),
+    got:(swapState.targetTasks||[]).map(x=>({name:x.name,pts:x.pts,room:x.room}))
+  });
+  if(state.swapLog.length>200) state.swapLog=state.swapLog.slice(-200);
+  saveState();
+}
+function swapsFor(kidId){
+  return state.swapLog.filter(s=>s.initiatorId===kidId||s.targetId===kidId);
+}
+
 function executeSwap(){
   const iGI=swapState.initiatorGI;
   const tGI=swapState.targetGI;
@@ -2519,18 +2575,20 @@ function executeSwap(){
     state.assignments[tGI].push({...task,done:false});
   }
 
+  recordSwap('accepted');
   saveState();
   playComplete();
   closeProposal();
   renderQuest();
-  showToast('Swap done! ✓');
+  showToast('Trade struck.');
 }
 
 document.getElementById('acceptSwapBtn').addEventListener('click',()=>{ executeSwap(); resetSwap(); });
 document.getElementById('refuseSwapBtn').addEventListener('click',()=>{
   tone(300,'sine',0.1,0.2);
+  recordSwap('refused');          // must run before resetSwap clears the parties
   closeProposal(); resetSwap();
-  showToast('Swap refused.');
+  showToast('Trade refused.');
 });
 
 /* ── SETTINGS ─────────────────────────────────────────────────── */
@@ -2970,6 +3028,7 @@ function renderDashboard(){
 
   renderPayoutPanel();
   renderPendingPanel();
+  renderSwapLog();
   renderGroupPanel(document.getElementById('dashGroup'), true);
 
   grid.innerHTML='';
@@ -2995,6 +3054,7 @@ function renderDashboard(){
         <div class="dc-stat"><div class="dc-stat-v">${r.screens.xbox}</div><div class="dc-stat-l">🎮 Xbox</div></div>
         <div class="dc-stat"><div class="dc-stat-v">${r.screens.pc}</div><div class="dc-stat-l">💻 PC</div></div>
         <div class="dc-stat"><div class="dc-stat-v">${lvl>=MAX_LEVEL?'—':xpToNextLevel(kid.xp||0)}</div><div class="dc-stat-l">xp to next</div></div>
+        <div class="dc-stat"><div class="dc-stat-v">${swapsFor(kid.id).filter(s=>s.outcome==='accepted').length}</div><div class="dc-stat-l">Trades</div></div>
       </div>
       <div class="dc-wallet">
         <div class="dc-bal ${bal===0?'zero':''}">${formatMoney(bal)}</div>
@@ -3118,6 +3178,40 @@ function renderDashboard(){
       list.appendChild(row);
     });
   });
+}
+
+let swapLogExpanded=false;
+
+function renderSwapLog(){
+  const el=document.getElementById('dashSwaps');
+  if(!el) return;
+  const log=[...state.swapLog].sort((a,b)=>b.ts-a.ts);
+  if(!log.length){
+    el.innerHTML='<p class="section-label">Trades</p>'+
+      '<div class="swap-log-card"><div class="tx-empty">No trades struck yet.</div></div>';
+    return;
+  }
+  const shown=swapLogExpanded?log:log.slice(0,6);
+  const accepted=log.filter(s=>s.outcome==='accepted').length;
+  const name=id=>{ const k=state.kids.find(x=>x.id===id); return k?`${k.avatar} ${esc(k.name)}`:'a former member'; };
+  const list=t=>t.length?t.map(x=>`${esc(x.name)} <span class="swap-pt">${x.pts}pt</span>`).join(', '):'nothing';
+
+  el.innerHTML=`<p class="section-label">Trades</p>
+    <div class="swap-log-card">
+      <div class="swap-log-head">${log.length} proposed · ${accepted} struck · ${log.length-accepted} refused</div>
+      ${shown.map(s=>`
+        <div class="swap-entry ${s.outcome}">
+          <div class="swap-when">${prettyDay(s.iso)}</div>
+          <div class="swap-body">
+            <div class="swap-parties">${name(s.initiatorId)} <span class="swap-arrow">⇄</span> ${name(s.targetId)}</div>
+            <div class="swap-detail"><b>${name(s.initiatorId)}</b> gave ${list(s.gave)} · took ${list(s.got)}</div>
+          </div>
+          <div class="swap-outcome">${s.outcome==='accepted'?'struck':'refused'}</div>
+        </div>`).join('')}
+      ${log.length>6?`<button class="btn-sm swap-log-more">${swapLogExpanded?'Show fewer':`Show all ${log.length}`}</button>`:''}
+    </div>`;
+  const more=el.querySelector('.swap-log-more');
+  if(more) more.addEventListener('click',()=>{ playClick(); swapLogExpanded=!swapLogExpanded; renderSwapLog(); });
 }
 
 function renderPayoutPanel(){
@@ -3723,6 +3817,7 @@ function bindXpSettings(){
     if(!confirm('Wipe all XP and graded days? Every kid returns to Level 0. This cannot be undone.')) return;
     state.dayLog=[];
     state.adjustments=[];
+    state.swapLog=[];
     state.kids.forEach(k=>{ k.xp=0; });
     saveState(); renderHome(); updateXpCurveHint();
     showToast('All XP reset. Everyone starts at Wanderer.');
