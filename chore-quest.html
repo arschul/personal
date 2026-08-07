@@ -1403,7 +1403,7 @@ const DEFAULT_DATA = {
       {name:'Take out the trash',      pts:1,everyone:false},
     ]},
     {name:'Kitchen',tasks:[
-      {name:'Do the dishes',               pts:3,everyone:false},
+      {name:'Do the dishes',               pts:5,everyone:false},
       {name:'Dry and put away dishes',     pts:2,everyone:false},
       {name:'Clean the floor',             pts:2,everyone:false},
       {name:'Clean the table',             pts:1,everyone:false},
@@ -1471,7 +1471,7 @@ const DEFAULT_SETTINGS = {
   groupRewards: DEFAULT_GROUP_REWARDS,
 };
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[],adjustments:[],swapLog:[],deleted:{tx:[],adj:[]}};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[],adjustments:[],swapLog:[],deleted:{tx:[],adj:[]},rollId:null,rolledAt:0};
 
 function loadState(){
   try{
@@ -1496,6 +1496,7 @@ function loadState(){
       const today=new Date().toDateString();
       if(p.today===today&&p.assignments){
         state.assignments=p.assignments;state.today=today;
+        state.rollId=p.rollId||null; state.rolledAt=p.rolledAt||0;
         // Migration: give older saved tasks a unique _id (needed for swap matching)
         let uid=1;
         for(const gi in state.assignments){
@@ -1509,6 +1510,7 @@ function loadState(){
       if(!state.migrations.brushTeeth){ ensureBrushTeethTask(); state.migrations.brushTeeth=true; migrated=true; }
       if(!state.migrations.ptsFixed){ migrateTaskPoints(); state.migrations.ptsFixed=true; migrated=true; }
       if(!state.migrations.sweepCorridor){ ensureSweepCorridorTask(); state.migrations.sweepCorridor=true; migrated=true; }
+      if(!state.migrations.dishes5){ setDishPoints(5); state.migrations.dishes5=true; migrated=true; }
       syncDishRotation();
 
       // ---- v4 structural migration (idempotent) ----
@@ -1519,6 +1521,10 @@ function loadState(){
       state.swapLog     = Array.isArray(p.swapLog) ? p.swapLog : [];
       state.deleted     = (p.deleted&&typeof p.deleted==='object') ? {tx:p.deleted.tx||[],adj:p.deleted.adj||[]} : {tx:[],adj:[]};
       if(normalizeIds()) migrated=true;
+      if(!state.migrations.rollFix){
+        if(dedupeAssignments()) migrated=true;
+        state.migrations.rollFix=true; migrated=true;
+      }
       recalcAllXp();
 
       if(migrated) saveState();
@@ -1530,7 +1536,7 @@ function loadState(){
   state.rooms=DEFAULT_DATA.rooms.map(r=>({...r,tasks:r.tasks.map(t=>({...t}))}));
   state.fewerHistory=[];
   state.dishRotation=['Samuel','Lucca','Pedro','Bianca'];
-  state.migrations={brushTeeth:true,ptsFixed:true,sweepCorridor:true};
+  state.migrations={brushTeeth:true,ptsFixed:true,sweepCorridor:true,dishes5:true,rollFix:true};
   state.settings=mergeSettings(null);
   state.dayLog=[];
   state.ledger=[];
@@ -1564,6 +1570,23 @@ function newId(prefix){
   __idSeq++;
   return prefix+'_'+Date.now().toString(36)+'_'+__idSeq.toString(36);
 }
+/* One-off repair: a board merged across two rolls can hold duplicates of the
+   same chore, or chores the kid was never given. Collapse by task identity. */
+function dedupeAssignments(){
+  if(!state.assignments) return false;
+  let fixed=false;
+  for(const gi in state.assignments){
+    const seen=new Set(), out=[];
+    for(const t of state.assignments[gi]){
+      const sig=(t.tid||t.name)+'|'+t.room;
+      if(seen.has(sig)){ fixed=true; continue; }
+      seen.add(sig); out.push(t);
+    }
+    state.assignments[gi]=out;
+  }
+  return fixed;
+}
+
 function normalizeIds(){
   let changed=false;
   for(const k of state.kids){
@@ -1591,6 +1614,14 @@ function normalizeIds(){
 
 // Keep dishRotation in sync with the current kids list: drop removed kids,
 // append any kid (e.g. newly added) who isn't in the rotation yet.
+function setDishPoints(pts){
+  for(const r of state.rooms){
+    for(const t of r.tasks){
+      if(t.isDish || t.name==='Do the dishes') t.pts=pts;
+    }
+  }
+}
+
 function syncDishRotation(){
   const names=state.kids.map(k=>k.name);
   state.dishRotation=state.dishRotation.filter(n=>names.includes(n));
@@ -2048,11 +2079,10 @@ function distributeTasks(){
     for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
     return arr;
   }
-  const sortedPool=[
-    ...shuffleArr(poolTasks.filter(t=>t.pts===3)),
-    ...shuffleArr(poolTasks.filter(t=>t.pts===2)),
-    ...shuffleArr(poolTasks.filter(t=>t.pts===1)),
-  ];
+  // Bucket by whatever point values actually exist, heaviest first. The old
+  // hard-coded 3/2/1 silently dropped any task worth anything else.
+  const tiers=[...new Set(poolTasks.map(t=>t.pts))].sort((a,b)=>b-a);
+  const sortedPool=tiers.flatMap(p=>shuffleArr(poolTasks.filter(t=>t.pts===p)));
 
   for(const task of sortedPool){
     const minP=Math.min(...kidIdx.map(i=>kidPts[i]));
@@ -2111,6 +2141,8 @@ function doAssign(){
   const{assignments,kidPts}=distributeTasks();
   state.assignments=assignments;
   state.today=new Date().toDateString();
+  state.rollId=newId('roll');
+  state.rolledAt=Date.now();
   touchTodayLog();
   saveState();
 
@@ -2851,7 +2883,8 @@ function sliceFor(key){
     case 'cq_config':   return {kids:state.kids, rooms:state.rooms, settings:state.settings,
                                 dishRotation:state.dishRotation, migrations:state.migrations,
                                 pin:getStoredPin()||null};
-    case 'cq_today':    return {today:state.today, assignments:state.assignments, fewerHistory:state.fewerHistory};
+    case 'cq_today':    return {today:state.today, assignments:state.assignments, fewerHistory:state.fewerHistory,
+                                rollId:state.rollId, rolledAt:state.rolledAt||0};
     case 'cq_progress': return {dayLog:state.dayLog, adjustments:state.adjustments, adjDeleted:state.deleted.adj};
     case 'cq_money':    return {ledger:state.ledger, txDeleted:state.deleted.tx};
     case 'cq_swaps':    return {swapLog:state.swapLog};
@@ -2923,9 +2956,20 @@ function applyRemote(key, remote, theirsNewer){
       break;
     case 'cq_today': {
       const myDate = state.today, theirDate = remote.today;
+      const takeTheirs = ()=>{
+        state.today = theirDate;
+        state.assignments = remote.assignments;
+        state.rollId = remote.rollId || null;
+        state.rolledAt = remote.rolledAt || 0;
+      };
       if(myDate && theirDate && myDate !== theirDate){
         // Different days entirely — the later calendar day is the live one.
-        if(theirsNewer){ state.today = theirDate; state.assignments = remote.assignments; }
+        if(theirsNewer) takeTheirs();
+      } else if((remote.rollId||null) !== (state.rollId||null)){
+        // A different draw. Task ids only mean anything inside one roll, so
+        // these two boards must never be merged — the newer draw replaces
+        // the older one outright.
+        if((remote.rolledAt||0) > (state.rolledAt||0)) takeTheirs();
       } else {
         state.today = theirDate || myDate;
         state.assignments = mergeAssignments(state.assignments, remote.assignments);
@@ -4296,6 +4340,7 @@ function stateForStorage(){
   return {
     kids:state.kids, rooms:state.rooms, assignments:state.assignments,
     today:state.today, fewerHistory:state.fewerHistory, dishRotation:state.dishRotation,
+    rollId:state.rollId, rolledAt:state.rolledAt,
     migrations:state.migrations, settings:state.settings, dayLog:state.dayLog,
     ledger:state.ledger, adjustments:state.adjustments, swapLog:state.swapLog,
     deleted:state.deleted
