@@ -1279,6 +1279,7 @@
         </div>
         <div class="settings-hint" id="rankAllHint" style="margin-top:0"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+          <button class="btn-sm primary" id="repairBoardBtn">⚒ Repair today's board</button>
           <button class="btn-sm primary" id="recalcXpBtn">↻ Recalculate All XP</button>
           <button class="btn-sm" id="resetXpBtn" style="border-color:var(--ember);color:var(--ember)">🗑 Reset All XP</button>
         </div>
@@ -1521,9 +1522,13 @@ function loadState(){
       state.swapLog     = Array.isArray(p.swapLog) ? p.swapLog : [];
       state.deleted     = (p.deleted&&typeof p.deleted==='object') ? {tx:p.deleted.tx||[],adj:p.deleted.adj||[]} : {tx:[],adj:[]};
       if(normalizeIds()) migrated=true;
-      if(!state.migrations.rollFix){
-        if(dedupeAssignments()) migrated=true;
-        state.migrations.rollFix=true; migrated=true;
+      // A board with no roll marker predates the sync fix and cannot be
+      // trusted. Repair it if it is actually broken; otherwise just stamp it
+      // so it stops being merged with boards from other draws.
+      if(state.assignments && !state.rollId){
+        if(boardLooksCorrupt()) repairBoard();
+        else { state.rollId=newId('roll'); state.rolledAt=Date.now(); }
+        migrated=true;
       }
       recalcAllXp();
 
@@ -1570,21 +1575,37 @@ function newId(prefix){
   __idSeq++;
   return prefix+'_'+Date.now().toString(36)+'_'+__idSeq.toString(36);
 }
-/* One-off repair: a board merged across two rolls can hold duplicates of the
-   same chore, or chores the kid was never given. Collapse by task identity. */
-function dedupeAssignments(){
+/* A healthy board hands each non-star chore to exactly one kid. If the same
+   chore sits on two kids, the board was merged across draws and is junk —
+   deduplicating it is useless, because every kid holds a valid-looking single
+   copy of everything. The only real repair is a fresh draw. */
+function boardLooksCorrupt(){
   if(!state.assignments) return false;
-  let fixed=false;
+  const owners={};
   for(const gi in state.assignments){
-    const seen=new Set(), out=[];
     for(const t of state.assignments[gi]){
+      if(t.everyone) continue;
       const sig=(t.tid||t.name)+'|'+t.room;
-      if(seen.has(sig)){ fixed=true; continue; }
-      seen.add(sig); out.push(t);
+      (owners[sig]=owners[sig]||new Set()).add(gi);
+      if(owners[sig].size>1) return true;
     }
-    state.assignments[gi]=out;
   }
-  return fixed;
+  // also catch a kid holding the same chore twice
+  for(const gi in state.assignments){
+    const sigs=state.assignments[gi].map(t=>(t.tid||t.name)+'|'+t.room);
+    if(new Set(sigs).size!==sigs.length) return true;
+  }
+  return false;
+}
+
+/* Redraws today's board in place, keeping the day but replacing the tasks. */
+function repairBoard(){
+  if(!state.assignments) return false;
+  const{assignments}=distributeTasks();
+  state.assignments=assignments;
+  state.rollId=newId('roll');
+  state.rolledAt=Date.now();
+  return true;
 }
 
 function normalizeIds(){
@@ -2962,10 +2983,13 @@ function applyRemote(key, remote, theirsNewer){
         state.rollId = remote.rollId || null;
         state.rolledAt = remote.rolledAt || 0;
       };
-      if(myDate && theirDate && myDate !== theirDate){
+      if(!state.assignments && remote.assignments){
+        // Nothing local to protect — a fresh device just adopts the board.
+        takeTheirs();
+      } else if(myDate && theirDate && myDate !== theirDate){
         // Different days entirely — the later calendar day is the live one.
         if(theirsNewer) takeTheirs();
-      } else if((remote.rollId||null) !== (state.rollId||null)){
+      } else if(!remote.rollId || !state.rollId || remote.rollId !== state.rollId){
         // A different draw. Task ids only mean anything inside one roll, so
         // these two boards must never be merged — the newer draw replaces
         // the older one outright.
@@ -4243,6 +4267,18 @@ function bindXpSettings(){
     if(moved.some(m=>m.after>m.before)){ playFanfare(); spawnConfetti(120); }
     else playSeal();
     showToast(`${moved.length} member${moved.length>1?'s':''} moved to rank ${lvl} · ${rewardsAt(lvl).title}.`);
+  });
+
+  const rb=document.getElementById('repairBoardBtn');
+  if(rb) rb.addEventListener('click',()=>{
+    playClick();
+    if(!state.assignments || state.today!==new Date().toDateString()){
+      showToast('No board posted today.'); return;
+    }
+    if(!confirm("Redraw today's board? Tick marks will be cleared.")) return;
+    repairBoard();
+    saveState(); renderHome(); renderQuest();
+    showToast('Board redrawn and shared with your other devices.');
   });
 
   document.getElementById('recalcXpBtn').addEventListener('click',()=>{
