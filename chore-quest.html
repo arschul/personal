@@ -1279,7 +1279,6 @@
         </div>
         <div class="settings-hint" id="rankAllHint" style="margin-top:0"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
-          <button class="btn-sm primary" id="repairBoardBtn">⚒ Repair today's board</button>
           <button class="btn-sm primary" id="recalcXpBtn">↻ Recalculate All XP</button>
           <button class="btn-sm" id="resetXpBtn" style="border-color:var(--ember);color:var(--ember)">🗑 Reset All XP</button>
         </div>
@@ -1472,7 +1471,7 @@ const DEFAULT_SETTINGS = {
   groupRewards: DEFAULT_GROUP_REWARDS,
 };
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[],adjustments:[],swapLog:[],deleted:{tx:[],adj:[]},rollId:null,rolledAt:0};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[],adjustments:[],swapLog:[],deleted:{tx:[],adj:[]},rollId:null,rolledAt:0,roll:null};
 
 function loadState(){
   try{
@@ -1495,14 +1494,23 @@ function loadState(){
       state.dishRotation=p.dishRotation||['Samuel','Lucca','Pedro','Bianca'];
       state.migrations=p.migrations||{};
       const today=new Date().toDateString();
-      if(p.today===today&&p.assignments){
-        state.assignments=p.assignments;state.today=today;
-        state.rollId=p.rollId||null; state.rolledAt=p.rolledAt||0;
-        // Migration: give older saved tasks a unique _id (needed for swap matching)
-        let uid=1;
-        for(const gi in state.assignments){
-          for(const t of state.assignments[gi]){ if(t._id===undefined) t._id=uid++; }
-        }
+      if(p.roll && p.roll.day===today && p.roll.base){
+        state.roll=p.roll;
+        buildBoard();
+      } else if(p.today===today&&p.assignments){
+        // Pre-roll save: adopt today's board as an immutable base so it can
+        // never be merged with another draw again.
+        state.roll=newRoll({}, today);
+        Object.keys(p.assignments).forEach(gi=>{
+          state.roll.base[gi]=p.assignments[gi]
+            .filter(t=>!t.extra)
+            .map(t=>({tid:t.tid,name:t.name,pts:t.pts,everyone:!!t.everyone,room:t.room}));
+          p.assignments[gi].forEach(t=>{
+            if(t.done) state.roll.ticks[tickKey(t,gi)]={done:true,at:t.doneAt||Date.now()};
+          });
+        });
+        buildBoard();
+        migrated=true;
       }
 
       // One-time migrations: each runs only once, ever, then is flagged done.
@@ -1522,13 +1530,9 @@ function loadState(){
       state.swapLog     = Array.isArray(p.swapLog) ? p.swapLog : [];
       state.deleted     = (p.deleted&&typeof p.deleted==='object') ? {tx:p.deleted.tx||[],adj:p.deleted.adj||[]} : {tx:[],adj:[]};
       if(normalizeIds()) migrated=true;
-      // Runs on every load, not once. Gating this behind a flag meant a board
-      // that was already stamped could never be repaired again.
+      // The chore list is the one thing a bad merge could still duplicate,
+      // and a duplicated chore list produces a legitimately duplicated draw.
       if(roomsLookCorrupt()){ repairRooms(); migrated=true; }
-      if(state.assignments){
-        if(boardLooksCorrupt()){ repairBoard(); migrated=true; }
-        else if(!state.rollId){ state.rollId=newId('roll'); state.rolledAt=Date.now(); migrated=true; }
-      }
       recalcAllXp();
 
       if(migrated) saveState();
@@ -1609,55 +1613,103 @@ function repairRooms(){
   return true;
 }
 
-/* A healthy board hands each non-star chore to exactly one kid. If the same
-   chore sits on two kids, the board was merged across draws and is junk —
-   deduplicating it is useless, because every kid holds a valid-looking single
-   copy of everything. The only real repair is a fresh draw. */
-function boardLooksCorrupt(){
-  if(!state.assignments) return false;
-  const owners={};
-  for(const gi in state.assignments){
-    for(const t of state.assignments[gi]){
-      if(t.everyone||t.extra) continue;
-      const sig=choreSig(t);
-      (owners[sig]=owners[sig]||new Set()).add(gi);
-      if(owners[sig].size>1) return true;          // same chore on two kids
-    }
-  }
-  for(const gi in state.assignments){
-    const sigs=state.assignments[gi].filter(t=>!t.extra).map(t=>choreSig(t));
-    if(new Set(sigs).size!==sigs.length) return true;   // same chore twice on one kid
-  }
-  return false;
+
+/* ============================================================
+   THE ROLL
+   A draw is recorded once, as an immutable base board plus three
+   mergeable overlays: ticks, one-offs and trades. Two devices never
+   merge task lists — only overlays, which are keyed and therefore
+   cannot duplicate. `state.assignments` is derived from this and is
+   never itself the source of truth.
+   ============================================================ */
+
+function tickKey(t, gi){
+  // A non-star chore is unique across the whole board, so its tick follows it
+  // through a trade. Star chores exist once per kid and need the kid in the key.
+  if(t.extra)     return 'x|'+t._xid;
+  if(t.everyone)  return gi+'|'+choreSig(t);
+  return choreSig(t);
 }
 
-/* Human-readable summary, so a board that is still wrong can be described
-   rather than guessed at. */
-function diagnoseBoard(){
-  const lines=[];
-  lines.push('Rooms: '+state.rooms.length+', chores: '+state.rooms.reduce((s,r)=>s+r.tasks.length,0)+
-             (roomsLookCorrupt()?' — DUPLICATED':' — clean'));
-  if(!state.assignments){ lines.push('No board posted.'); return lines.join('\n'); }
-  for(const gi in state.assignments){
-    const kid=state.kids[gi]; if(!kid) continue;
-    const list=state.assignments[gi];
-    const pts=list.reduce((s,t)=>s+t.pts,0);
-    const sigs=list.filter(t=>!t.extra).map(t=>choreSig(t));
-    const dupes=sigs.length-new Set(sigs).size;
-    lines.push(`${kid.name}: ${list.length} tasks, ${pts} pts`+(dupes?`, ${dupes} DUPLICATE`:''));
-  }
-  lines.push(boardLooksCorrupt()?'Board: BROKEN':'Board: clean');
-  return lines.join('\n');
+function newRoll(base, dayStr){
+  return { id:newId('roll'), at:Date.now(), day:dayStr,
+           base, ticks:{}, extras:[], swaps:[], extrasDeleted:[] };
 }
 
-/* Redraws today's board in place, keeping the day but replacing the tasks. */
-function repairBoard(){
-  if(!state.assignments) return false;
-  const{assignments}=distributeTasks();
-  state.assignments=assignments;
-  state.rollId=newId('roll');
-  state.rolledAt=Date.now();
-  return true;
+/* Rebuilds state.assignments from the roll. Pure: same roll in, same board out,
+   on every device, forever. */
+function buildBoard(){
+  const roll = state.roll;
+  if(!roll || !roll.base){ state.assignments = null; return; }
+
+  const board = {};
+  Object.keys(roll.base).forEach(gi => { board[gi] = roll.base[gi].map(t => ({...t})); });
+
+  // trades, oldest first
+  [...(roll.swaps||[])].sort((a,b)=>a.at-b.at).forEach(sw=>{
+    const from = board[sw.fromGi], to = board[sw.toGi];
+    if(!from || !to) return;
+    const i = from.findIndex(t => !t.everyone && !t.extra && choreSig(t)===sw.sig);
+    if(i < 0) return;
+    to.push(from.splice(i,1)[0]);
+  });
+
+  // one-offs
+  const gone = new Set(roll.extrasDeleted||[]);
+  (roll.extras||[]).forEach(x=>{
+    if(gone.has(x.id)) return;
+    if(!board[x.gi]) board[x.gi] = [];
+    board[x.gi].push({ tid:'extra_'+x.id, _xid:x.id, name:x.name, pts:x.pts,
+                       everyone:false, extra:true, room:'Extra', done:false });
+  });
+
+  // ticks, and a stable _id for the swap UI
+  let uid = 1;
+  Object.keys(board).forEach(gi=>{
+    board[gi].forEach(t=>{
+      t._id = uid++;
+      const k = tickKey(t, gi);
+      const tick = roll.ticks[k];
+      t.done   = !!(tick && tick.done);
+      t.doneAt = tick ? tick.at : 0;
+    });
+  });
+
+  state.assignments = board;
+  state.today  = roll.day;
+  state.rollId = roll.id;
+  state.rolledAt = roll.at;
+}
+
+function setTick(gi, task, done){
+  if(!state.roll) return;
+  state.roll.ticks[tickKey(task, gi)] = { done:!!done, at:Date.now() };
+  buildBoard();
+}
+
+/* ---- overlay merges. Every one is keyed, so re-running is a no-op. ---- */
+function mergeRolls(mine, theirs){
+  if(!theirs || !theirs.base) return mine;
+  if(!mine   || !mine.base)   return theirs;
+  // Different draws never blend — the later one replaces the earlier outright.
+  if(mine.id !== theirs.id) return (theirs.at||0) > (mine.at||0) ? theirs : mine;
+
+  const out = {...mine};
+  out.ticks = {...theirs.ticks};
+  Object.keys(mine.ticks||{}).forEach(k=>{
+    const a = mine.ticks[k], b = out.ticks[k];
+    if(!b || (a.at||0) >= (b.at||0)) out.ticks[k] = a;   // most recent toggle wins
+  });
+  out.extrasDeleted = [...new Set([...(mine.extrasDeleted||[]), ...(theirs.extrasDeleted||[])])];
+  const byId = new Map();
+  (theirs.extras||[]).forEach(x=>byId.set(x.id,x));
+  (mine.extras||[]).forEach(x=>byId.set(x.id,x));
+  out.extras = [...byId.values()].filter(x=>!out.extrasDeleted.includes(x.id));
+  const sw = new Map();
+  (theirs.swaps||[]).forEach(s=>sw.set(s.id,s));
+  (mine.swaps||[]).forEach(s=>sw.set(s.id,s));
+  out.swaps = [...sw.values()].sort((a,b)=>a.at-b.at);
+  return out;
 }
 
 function normalizeIds(){
@@ -2212,10 +2264,12 @@ function doAssign(){
   resumeAC();
   const activeKids=getActiveKids();
   const{assignments,kidPts}=distributeTasks();
-  state.assignments=assignments;
-  state.today=new Date().toDateString();
-  state.rollId=newId('roll');
-  state.rolledAt=Date.now();
+  const base={};
+  Object.keys(assignments).forEach(gi=>{
+    base[gi]=assignments[gi].map(t=>({tid:t.tid,name:t.name,pts:t.pts,everyone:!!t.everyone,room:t.room,isDish:!!t.isDish}));
+  });
+  state.roll=newRoll(base, new Date().toDateString());
+  buildBoard();
   touchTodayLog();
   saveState();
 
@@ -2377,7 +2431,7 @@ function renderQuest(){
           requirePin(()=>removeExtraTask(gi,task._id));
         });
         item.addEventListener('click',()=>{
-          task.done=!task.done;task.doneAt=Date.now();touchTodayLog();saveState();
+          setTick(gi,task,!task.done);touchTodayLog();saveState();
           task.done?playCheck():playUncheck();
           item.classList.toggle('checked',task.done);
           item.querySelector('.task-checkbox').textContent=task.done?'✓':'';
@@ -2735,23 +2789,19 @@ function executeSwap(){
   const iGiveTasks=swapState.selectedTasks;
   const tGiveTasks=swapState.targetTasks;
 
-  // Remove i's tasks, add t's tasks
+  // Recorded as moves on the roll rather than edits to the board, so the
+  // trade survives a sync from a device that never saw it.
+  const at=Date.now();
+  let n=0;
   for(const task of iGiveTasks){
-    const idx=state.assignments[iGI].findIndex(t=>t._id===task._id);
-    if(idx!==-1) state.assignments[iGI].splice(idx,1);
+    state.roll.swaps.push({id:newId('sw'), at:at+(n++), sig:choreSig(task), fromGi:String(iGI), toGi:String(tGI)});
+    delete state.roll.ticks[choreSig(task)];
   }
   for(const task of tGiveTasks){
-    state.assignments[iGI].push({...task,done:false});
+    state.roll.swaps.push({id:newId('sw'), at:at+(n++), sig:choreSig(task), fromGi:String(tGI), toGi:String(iGI)});
+    delete state.roll.ticks[choreSig(task)];
   }
-
-  // Remove t's tasks, add i's tasks
-  for(const task of tGiveTasks){
-    const idx=state.assignments[tGI].findIndex(t=>t._id===task._id);
-    if(idx!==-1) state.assignments[tGI].splice(idx,1);
-  }
-  for(const task of iGiveTasks){
-    state.assignments[tGI].push({...task,done:false});
-  }
+  buildBoard();
 
   recordSwap('accepted');
   saveState();
@@ -2956,8 +3006,7 @@ function sliceFor(key){
     case 'cq_config':   return {kids:state.kids, rooms:state.rooms, settings:state.settings,
                                 dishRotation:state.dishRotation, migrations:state.migrations,
                                 pin:getStoredPin()||null};
-    case 'cq_today':    return {today:state.today, assignments:state.assignments, fewerHistory:state.fewerHistory,
-                                rollId:state.rollId, rolledAt:state.rolledAt||0};
+    case 'cq_today':    return {roll:state.roll, fewerHistory:state.fewerHistory};
     case 'cq_progress': return {dayLog:state.dayLog, adjustments:state.adjustments, adjDeleted:state.deleted.adj};
     case 'cq_money':    return {ledger:state.ledger, txDeleted:state.deleted.tx};
     case 'cq_swaps':    return {swapLog:state.swapLog};
@@ -2975,27 +3024,6 @@ function mergeById(mine, theirs, deletedIds){
   (theirs||[]).forEach(x => { if(x && x.id && !gone.has(x.id)) out.set(x.id, x); });
   (mine||[]).forEach(x => { if(x && x.id && !gone.has(x.id)) out.set(x.id, x); });
   return [...out.values()];
-}
-
-function mergeAssignments(mine, theirs){
-  if(!mine)   return theirs || null;
-  if(!theirs) return mine;
-  const out = {};
-  const gis = new Set([...Object.keys(mine), ...Object.keys(theirs)]);
-  gis.forEach(gi => {
-    const a = mine[gi] || [], b = theirs[gi] || [];
-    const byId = new Map();
-    b.forEach(t => byId.set(t._id, {...t}));
-    a.forEach(t => {
-      const other = byId.get(t._id);
-      if(!other){ byId.set(t._id, {...t}); return; }
-      // Whichever device toggled the task most recently wins that tick.
-      const mineAt = t.doneAt || 0, theirsAt = other.doneAt || 0;
-      byId.set(t._id, mineAt >= theirsAt ? {...t} : other);
-    });
-    out[gi] = [...byId.values()];
-  });
-  return out;
 }
 
 function mergeDayLog(mine, theirs){
@@ -3028,27 +3056,15 @@ function applyRemote(key, remote, theirsNewer){
       }
       break;
     case 'cq_today': {
-      const myDate = state.today, theirDate = remote.today;
-      const takeTheirs = ()=>{
-        state.today = theirDate;
-        state.assignments = remote.assignments;
-        state.rollId = remote.rollId || null;
-        state.rolledAt = remote.rolledAt || 0;
-      };
-      if(!state.assignments && remote.assignments){
-        // Nothing local to protect — a fresh device just adopts the board.
-        takeTheirs();
-      } else if(myDate && theirDate && myDate !== theirDate){
-        // Different days entirely — the later calendar day is the live one.
-        if(theirsNewer) takeTheirs();
-      } else if(!remote.rollId || !state.rollId || remote.rollId !== state.rollId){
-        // A different draw. Task ids only mean anything inside one roll, so
-        // these two boards must never be merged — the newer draw replaces
-        // the older one outright.
-        if((remote.rolledAt||0) > (state.rolledAt||0)) takeTheirs();
-      } else {
-        state.today = theirDate || myDate;
-        state.assignments = mergeAssignments(state.assignments, remote.assignments);
+      // Boards are never blended. Same draw merges only the overlays; a
+      // different draw replaces wholesale. Duplicates are unreachable.
+      const merged = mergeRolls(state.roll, remote.roll);
+      if(merged !== state.roll){ state.roll = merged; buildBoard(); }
+      else if(remote.roll && state.roll && remote.roll.id === state.roll.id){ buildBoard(); }
+      if(!state.roll || state.roll.day !== new Date().toDateString()){
+        if(state.roll && state.roll.day !== new Date().toDateString()){
+          state.roll=null; state.assignments=null; state.today=null;
+        }
       }
       if(Array.isArray(remote.fewerHistory) && theirsNewer) state.fewerHistory = remote.fewerHistory;
       break;
@@ -3119,10 +3135,7 @@ async function syncPull(){
   });
   if(changed){
     normalizeIds();
-    // A pull can bring in a broken board or a duplicated room list from a
-    // device that hasn't upgraded yet.
     if(roomsLookCorrupt()) repairRooms();
-    if(state.assignments && boardLooksCorrupt()) repairBoard();
     recalcAllXp();
     localStorage.setItem('chorequest_v4', JSON.stringify(stateForStorage()));
   }
@@ -3305,29 +3318,25 @@ function nextAssignmentUid(){
 }
 
 function addExtraTask(name, pts, kidIds){
-  if(!state.assignments) return 0;
-  let uid=nextAssignmentUid(), added=0;
+  if(!state.roll) return 0;
+  let added=0;
   kidIds.forEach(id=>{
     const gi=state.kids.findIndex(k=>k.id===id);
     if(gi<0) return;
-    if(!state.assignments[gi]) state.assignments[gi]=[];
-    state.assignments[gi].push({
-      tid:'extra_'+uid, _id:uid++, name, pts:Number(pts)||1,
-      everyone:false, done:false, room:'Extra', extra:true
-    });
+    state.roll.extras.push({id:newId('x'), gi:String(gi), name, pts:Number(pts)||1, at:Date.now()});
     added++;
   });
-  if(added){ touchTodayLog(); saveState(); }
+  if(added){ buildBoard(); touchTodayLog(); saveState(); }
   return added;
 }
 
 function removeExtraTask(gi, id){
+  if(!state.roll) return;
   const list=state.assignments&&state.assignments[gi];
-  if(!list) return;
-  const i=list.findIndex(t=>t._id===id&&t.extra);
-  if(i<0) return;
-  list.splice(i,1);
-  touchTodayLog(); saveState(); renderQuest();
+  const task=list&&list.find(t=>t._id===id&&t.extra);
+  if(!task) return;
+  if(!state.roll.extrasDeleted.includes(task._xid)) state.roll.extrasDeleted.push(task._xid);
+  buildBoard(); touchTodayLog(); saveState(); renderQuest();
 }
 
 /* ---- modal ---- */
@@ -4325,19 +4334,6 @@ function bindXpSettings(){
     showToast(`${moved.length} member${moved.length>1?'s':''} moved to rank ${lvl} · ${rewardsAt(lvl).title}.`);
   });
 
-  const rb=document.getElementById('repairBoardBtn');
-  if(rb) rb.addEventListener('click',()=>{
-    playClick();
-    if(!state.assignments || state.today!==new Date().toDateString()){
-      alert(diagnoseBoard()); return;
-    }
-    if(!confirm(diagnoseBoard()+"\n\nRedraw today's board? Tick marks will be cleared.")) return;
-    if(roomsLookCorrupt()) repairRooms();
-    repairBoard();
-    saveState(); renderHome(); renderQuest();
-    alert(diagnoseBoard());
-  });
-
   document.getElementById('recalcXpBtn').addEventListener('click',()=>{
     playClick(); recalcAllXp(); saveState(); renderHome(); updateXpCurveHint();
     showToast('XP recalculated from the full history.');
@@ -4363,7 +4359,8 @@ document.getElementById('newDayBtn').addEventListener('click',()=>{
        !confirm("Today hasn't been graded yet — no XP was awarded. Start a new day anyway?")) return;
     document.getElementById('allDoneOverlay').classList.remove('show');
     questEditing=false; gradeDrafts={};
-    state.assignments=null;state.today=null;saveState();renderHome();showScreen('home');
+    state.roll=null; state.assignments=null; state.today=null; state.rollId=null; state.rolledAt=0;
+    saveState();renderHome();showScreen('home');
   });
 });
 document.getElementById('allDoneGradeBtn').addEventListener('click',()=>{
@@ -4433,7 +4430,7 @@ function stateForStorage(){
   return {
     kids:state.kids, rooms:state.rooms, assignments:state.assignments,
     today:state.today, fewerHistory:state.fewerHistory, dishRotation:state.dishRotation,
-    rollId:state.rollId, rolledAt:state.rolledAt,
+    rollId:state.rollId, rolledAt:state.rolledAt, roll:state.roll,
     migrations:state.migrations, settings:state.settings, dayLog:state.dayLog,
     ledger:state.ledger, adjustments:state.adjustments, swapLog:state.swapLog,
     deleted:state.deleted
