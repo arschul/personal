@@ -1522,13 +1522,12 @@ function loadState(){
       state.swapLog     = Array.isArray(p.swapLog) ? p.swapLog : [];
       state.deleted     = (p.deleted&&typeof p.deleted==='object') ? {tx:p.deleted.tx||[],adj:p.deleted.adj||[]} : {tx:[],adj:[]};
       if(normalizeIds()) migrated=true;
-      // A board with no roll marker predates the sync fix and cannot be
-      // trusted. Repair it if it is actually broken; otherwise just stamp it
-      // so it stops being merged with boards from other draws.
-      if(state.assignments && !state.rollId){
-        if(boardLooksCorrupt()) repairBoard();
-        else { state.rollId=newId('roll'); state.rolledAt=Date.now(); }
-        migrated=true;
+      // Runs on every load, not once. Gating this behind a flag meant a board
+      // that was already stamped could never be repaired again.
+      if(roomsLookCorrupt()){ repairRooms(); migrated=true; }
+      if(state.assignments){
+        if(boardLooksCorrupt()){ repairBoard(); migrated=true; }
+        else if(!state.rollId){ state.rollId=newId('roll'); state.rolledAt=Date.now(); migrated=true; }
       }
       recalcAllXp();
 
@@ -1575,6 +1574,41 @@ function newId(prefix){
   __idSeq++;
   return prefix+'_'+Date.now().toString(36)+'_'+__idSeq.toString(36);
 }
+/* Task identity for repair purposes is the chore itself, not the generated
+   tid — two devices assign different tids to the same chore, so tid is
+   useless for spotting duplicates. */
+function choreSig(t, roomName){
+  return String(t.name||'').trim().toLowerCase()+'|'+String(roomName||t.room||'').trim().toLowerCase();
+}
+
+/* The room list itself can pick up duplicates — same room twice, or the same
+   chore twice inside one room. That inflates the pool and hands out repeats,
+   which no amount of board repair can fix. */
+function roomsLookCorrupt(){
+  const roomNames=state.rooms.map(r=>String(r.name||'').trim().toLowerCase());
+  if(new Set(roomNames).size!==roomNames.length) return true;
+  for(const r of state.rooms){
+    const sigs=r.tasks.map(t=>choreSig(t,r.name));
+    if(new Set(sigs).size!==sigs.length) return true;
+  }
+  return false;
+}
+function repairRooms(){
+  const byName=new Map();
+  for(const r of state.rooms){
+    const key=String(r.name||'').trim().toLowerCase();
+    if(!byName.has(key)) byName.set(key,{name:r.name,tasks:[]});
+    const target=byName.get(key);
+    for(const t of r.tasks){
+      const sig=choreSig(t,r.name);
+      if(target.tasks.some(x=>choreSig(x,target.name)===sig)) continue;
+      target.tasks.push(t);
+    }
+  }
+  state.rooms=[...byName.values()];
+  return true;
+}
+
 /* A healthy board hands each non-star chore to exactly one kid. If the same
    chore sits on two kids, the board was merged across draws and is junk —
    deduplicating it is useless, because every kid holds a valid-looking single
@@ -1584,18 +1618,36 @@ function boardLooksCorrupt(){
   const owners={};
   for(const gi in state.assignments){
     for(const t of state.assignments[gi]){
-      if(t.everyone) continue;
-      const sig=(t.tid||t.name)+'|'+t.room;
+      if(t.everyone||t.extra) continue;
+      const sig=choreSig(t);
       (owners[sig]=owners[sig]||new Set()).add(gi);
-      if(owners[sig].size>1) return true;
+      if(owners[sig].size>1) return true;          // same chore on two kids
     }
   }
-  // also catch a kid holding the same chore twice
   for(const gi in state.assignments){
-    const sigs=state.assignments[gi].map(t=>(t.tid||t.name)+'|'+t.room);
-    if(new Set(sigs).size!==sigs.length) return true;
+    const sigs=state.assignments[gi].filter(t=>!t.extra).map(t=>choreSig(t));
+    if(new Set(sigs).size!==sigs.length) return true;   // same chore twice on one kid
   }
   return false;
+}
+
+/* Human-readable summary, so a board that is still wrong can be described
+   rather than guessed at. */
+function diagnoseBoard(){
+  const lines=[];
+  lines.push('Rooms: '+state.rooms.length+', chores: '+state.rooms.reduce((s,r)=>s+r.tasks.length,0)+
+             (roomsLookCorrupt()?' — DUPLICATED':' — clean'));
+  if(!state.assignments){ lines.push('No board posted.'); return lines.join('\n'); }
+  for(const gi in state.assignments){
+    const kid=state.kids[gi]; if(!kid) continue;
+    const list=state.assignments[gi];
+    const pts=list.reduce((s,t)=>s+t.pts,0);
+    const sigs=list.filter(t=>!t.extra).map(t=>choreSig(t));
+    const dupes=sigs.length-new Set(sigs).size;
+    lines.push(`${kid.name}: ${list.length} tasks, ${pts} pts`+(dupes?`, ${dupes} DUPLICATE`:''));
+  }
+  lines.push(boardLooksCorrupt()?'Board: BROKEN':'Board: clean');
+  return lines.join('\n');
 }
 
 /* Redraws today's board in place, keeping the day but replacing the tasks. */
@@ -3067,6 +3119,10 @@ async function syncPull(){
   });
   if(changed){
     normalizeIds();
+    // A pull can bring in a broken board or a duplicated room list from a
+    // device that hasn't upgraded yet.
+    if(roomsLookCorrupt()) repairRooms();
+    if(state.assignments && boardLooksCorrupt()) repairBoard();
     recalcAllXp();
     localStorage.setItem('chorequest_v4', JSON.stringify(stateForStorage()));
   }
@@ -4273,12 +4329,13 @@ function bindXpSettings(){
   if(rb) rb.addEventListener('click',()=>{
     playClick();
     if(!state.assignments || state.today!==new Date().toDateString()){
-      showToast('No board posted today.'); return;
+      alert(diagnoseBoard()); return;
     }
-    if(!confirm("Redraw today's board? Tick marks will be cleared.")) return;
+    if(!confirm(diagnoseBoard()+"\n\nRedraw today's board? Tick marks will be cleared.")) return;
+    if(roomsLookCorrupt()) repairRooms();
     repairBoard();
     saveState(); renderHome(); renderQuest();
-    showToast('Board redrawn and shared with your other devices.');
+    alert(diagnoseBoard());
   });
 
   document.getElementById('recalcXpBtn').addEventListener('click',()=>{
