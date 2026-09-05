@@ -316,7 +316,7 @@
   .quest-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
   @media(min-width:560px){ .quest-grid { grid-template-columns: repeat(2,1fr); } }
   /* four contracts across, so the whole board reads in one glance */
-  @media(min-width:1080px){ .quest-grid { grid-template-columns: repeat(4,1fr); gap: 12px; } }
+  @media(min-width:700px){ .quest-grid { grid-template-columns: repeat(4,1fr); gap: 10px; } }
 
   /* the contract itself */
   .kid-card {
@@ -1077,6 +1077,33 @@
   .sync-state.busy .sync-state-label { color: var(--brass-lit); }
   .sync-state.off  .sync-state-label { color: var(--text-muted); }
   .sync-state-detail { font-size: 0.8rem; color: var(--text-muted); margin-top: 6px; line-height: 1.5; font-style: italic; }
+
+/* ── minutes + per-task adjustment ───────────────────────────── */
+.mins-headline{font-size:2rem;font-weight:900;line-height:1.1;margin:2px 0 4px}
+.gc-adjust{margin-top:10px;background:var(--stone-2);color:var(--text);border:none;
+  border-radius:8px;padding:8px 14px;font:inherit;font-size:0.82rem;font-weight:800;cursor:pointer}
+.gc-adjust:hover{filter:brightness(1.15)}
+.gc-tasks{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.gc-task{background:rgba(0,0,0,0.06);border-radius:9px;padding:9px 11px}
+.gc-task-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.gc-task-name{font-weight:800;font-size:0.86rem}
+.gc-task-pts{font-size:0.72rem;opacity:0.68;white-space:nowrap}
+.gc-task-min{font-size:0.78rem;font-weight:800;min-width:38px;text-align:right;opacity:0.85}
+.gc-slider-row{display:flex;align-items:center;gap:10px;margin-top:6px}
+.gc-slider{flex:1;min-width:0}
+.gc-pct{font-size:0.78rem;font-weight:900;min-width:40px;text-align:right}
+.mins-history{margin-top:12px}
+
+/* ── the board: four across from tablet width, compacted so all four
+      columns fit without scrolling sideways ─────────────────────── */
+.quest-grid{align-items:start}
+@media (min-width:700px) and (max-width:1080px){
+  .quest-grid .task-name{font-size:0.74rem}
+  .quest-grid .diff-badge{font-size:0.6rem;padding:1px 5px}
+  .quest-grid .task-item{padding:5px 7px}
+  .quest-grid .kid-card{padding:10px}
+  .quest-grid .kid-name{font-size:0.85rem}
+}
 </style>
 </head>
 <body>
@@ -1143,7 +1170,7 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <button class="btn-sm" id="dashBackBtn">← Back</button>
-          <button class="btn-sm primary" id="dashRewardsBtn">Renown</button>
+          <button class="btn-sm primary" id="dashRewardsBtn">Screen Time</button>
         </div>
       </div>
       <div id="dashPayout"></div>
@@ -1158,7 +1185,7 @@
     <div style="padding:24px 28px">
       <div class="quest-header">
         <div>
-          <div class="quest-title">Hall of Renown</div>
+          <div class="quest-title">Screen Time</div>
           <div class="quest-date" id="rewardsSubtitle"></div>
         </div>
         <button class="btn-sm primary" id="rewardsBackBtn">← Back</button>
@@ -1251,38 +1278,24 @@
         <div style="margin-top:8px"><button class="btn-sm" id="resetFairnessBtn">↺ Reset History</button></div>
       </div>
       <div class="settings-section">
-        <div class="settings-section-title">Experience &amp; Ranks</div>
+        <div class="settings-section-title">Screen Time</div>
         <div class="num-row">
-          <label for="setBreakEven">Break-even slider %</label>
-          <input class="input-sm" type="number" id="setBreakEven" min="1" max="99" step="1">
+          <label for="setDailyMinutes">Screen minutes per kid per day</label>
+          <input class="input-sm" type="number" id="setDailyMinutes" min="1" max="1440" step="5">
         </div>
-        <div class="num-row">
-          <label for="setPerfectXp">XP for a perfect day</label>
-          <input class="input-sm" type="number" id="setPerfectXp" min="1" max="10000" step="5">
+        <div class="settings-row">
+          <label for="setSealHour">Auto-seal hour (0-23)</label>
+          <input class="input-sm" type="number" id="setSealHour" min="0" max="23" step="1">
         </div>
-        <div class="num-row">
-          <label for="setExtraXp">Bonus xp per one-off point</label>
-          <input class="input-sm" type="number" id="setExtraXp" min="0" max="500" step="1">
+        <div class="settings-row">
+          <label for="setAutoSeal">Seal the day automatically</label>
+          <input type="checkbox" id="setAutoSeal">
         </div>
-        <div class="num-row">
-          <label for="setCurrency">Currency symbol</label>
-          <input class="input-sm" type="text" id="setCurrency" maxlength="4" style="width:92px">
-        </div>
-        <div class="num-row">
-          <label for="setEditWindow">Days a graded day stays editable</label>
+        <div class="settings-row">
+          <label for="setEditWindow">Days a sealed day stays adjustable</label>
           <input class="input-sm" type="number" id="setEditWindow" min="0" max="365" step="1">
         </div>
-        <div class="num-row" style="margin-top:16px">
-          <label for="setRankAll">Move everyone to rank</label>
-          <select class="select-pts" id="setRankAll" style="min-width:170px"></select>
-          <button class="btn-sm primary" id="applyRankAllBtn">Apply</button>
-        </div>
-        <div class="settings-hint" id="rankAllHint" style="margin-top:0"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
-          <button class="btn-sm primary" id="recalcXpBtn">↻ Recalculate All XP</button>
-          <button class="btn-sm" id="resetXpBtn" style="border-color:var(--ember);color:var(--ember)">🗑 Reset All XP</button>
-        </div>
-        <div class="settings-hint" id="xpCurveHint"></div>
+        <div class="settings-hint" id="minutesHint"></div>
       </div>
       <div class="settings-section">
         <div class="settings-section-title">The Guild Seal</div>
@@ -1359,13 +1372,9 @@
   </div>
 </div>
 
-<div id="levelup-overlay">
-  <div class="lu-card" id="luCard"></div>
-</div>
-
 <div class="all-done-overlay" id="allDoneOverlay">
   <div class="all-done-text">Every Contract Fulfilled</div>
-  <div class="all-done-sub">The board is clear. Seal the day to award the experience.</div>
+  <div class="all-done-sub">The board is clear. Full screen time for everyone.</div>
   <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:28px">
     <button class="btn-new-day" id="allDoneGradeBtn">Seal the day</button>
     <button class="btn-new-day" id="newDayBtn">Close the day</button>
@@ -1376,7 +1385,7 @@
   <button class="hall-btn on" id="navBoard"><span class="hall-ico">🛡️</span>Board</button>
   <button class="hall-btn" id="navQuests"><span class="hall-ico">📜</span>Quests</button>
   <button class="hall-btn" id="navLedger"><span class="hall-ico">⚖️</span>Ledger</button>
-  <button class="hall-btn" id="navRenown"><span class="hall-ico">🏆</span>Renown</button>
+  <button class="hall-btn" id="navRenown"><span class="hall-ico">⏱️</span>Screen Time</button>
 </nav>
 
 <div class="toast" id="toast"></div>
@@ -1435,43 +1444,17 @@ function kidInk(i){   return KID_INKS[((i%KID_INKS.length)+KID_INKS.length)%KID_
    XP & LEVELING CONFIG (v4)
    ============================================================ */
 
-const MAX_LEVEL = 10;
-
-// Cumulative XP required to *be* level n:  15n^2 + 75n
-// L1=90  L2=210  L3=360  L4=540  L5=750  L6=990  L7=1260  L8=1560  L9=1890  L10=2250
-function xpForLevel(n){ return 15*n*n + 75*n; }
-
-const DEFAULT_REWARDS = [
-  {lvl:0,  title:'Wanderer',     screens:{tv:0, xbox:0, pc:0}, allowance:0,   note:'No screens'},
-  {lvl:1,  title:'Page',         screens:{tv:30,xbox:0, pc:0}, allowance:0,   note:'TV unlocked'},
-  {lvl:2,  title:'Squire',       screens:{tv:30,xbox:30,pc:0}, allowance:0,   note:'Xbox unlocked'},
-  {lvl:3,  title:'Knight',       screens:{tv:30,xbox:30,pc:30},allowance:0,   note:'PC unlocked'},
-  {lvl:4,  title:'Sentinel',     screens:{tv:35,xbox:35,pc:35},allowance:0,   note:'+5 min on every screen'},
-  {lvl:5,  title:'Guardian',     screens:{tv:35,xbox:35,pc:35},allowance:1.5, note:'Weekly allowance unlocked'},
-  {lvl:6,  title:'Paladin',      screens:{tv:40,xbox:40,pc:40},allowance:1.5, note:'+5 min on every screen'},
-  {lvl:7,  title:'Warden',       screens:{tv:40,xbox:40,pc:40},allowance:2.5, note:'Allowance raise'},
-  {lvl:8,  title:'Champion',     screens:{tv:45,xbox:45,pc:45},allowance:2.5, note:'+5 min on every screen'},
-  {lvl:9,  title:'Highlord',     screens:{tv:50,xbox:50,pc:50},allowance:2.5, note:'+5 min on every screen'},
-  {lvl:10, title:'Dragonslayer', screens:{tv:50,xbox:50,pc:50},allowance:3.0, note:'Allowance raise'},
-];
-
-const DEFAULT_GROUP_REWARDS = [
-  {lvl:3, icon:'📺', name:'Saturday morning TV', detail:'Everyone watches, 8:00–10:00 am'},
-  {lvl:5, icon:'▶️', name:'YouTube unlocked',    detail:'Available to the whole party'},
-  {lvl:8, icon:'🍕', name:'Monthly pizza night', detail:'Once every month'},
-];
+const DAILY_MINUTES = 120;   // every kid can earn this much screen time a day
+const SEAL_HOUR    = 18;    // 18:00 local — the day seals itself
 
 const DEFAULT_SETTINGS = {
-  breakEvenPct: 70,      // slider % at which XP delta is exactly 0
-  xpPerfectDay: 120,     // XP for a flawless (100%) day
-  xpPerExtraPoint: 8,    // bonus XP per point of a completed one-off task
-  currency: 'R$',
-  editWindowDays: 7,     // how far back a committed day may be re-graded
-  rewards: DEFAULT_REWARDS,
-  groupRewards: DEFAULT_GROUP_REWARDS,
+  dailyMinutes: DAILY_MINUTES,
+  sealHour: SEAL_HOUR,
+  autoSeal: true,
+  editWindowDays: 7,     // how far back a sealed day may be adjusted
 };
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],ledger:[],adjustments:[],swapLog:[],deleted:{tx:[],adj:[]},rollId:null,rolledAt:0,roll:null};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],adjustments:[],swapLog:[],deleted:{adj:[]},rollId:null,rolledAt:0,roll:null};
 
 function loadState(){
   try{
@@ -1526,15 +1509,14 @@ function loadState(){
       // ---- v4 structural migration (idempotent) ----
       state.settings = mergeSettings(p.settings);
       state.dayLog   = Array.isArray(p.dayLog) ? p.dayLog : [];
-      state.ledger   = Array.isArray(p.ledger) ? p.ledger : [];
       state.adjustments = Array.isArray(p.adjustments) ? p.adjustments : [];
       state.swapLog     = Array.isArray(p.swapLog) ? p.swapLog : [];
-      state.deleted     = (p.deleted&&typeof p.deleted==='object') ? {tx:p.deleted.tx||[],adj:p.deleted.adj||[]} : {tx:[],adj:[]};
+      state.deleted     = (p.deleted&&typeof p.deleted==='object') ? {adj:p.deleted.adj||[]} : {adj:[]};
       if(normalizeIds()) migrated=true;
       // The chore list is the one thing a bad merge could still duplicate,
       // and a duplicated chore list produces a legitimately duplicated draw.
       if(roomsLookCorrupt()){ repairRooms(); migrated=true; }
-      recalcAllXp();
+      migrateToMinutes();
 
       if(migrated) saveState();
 
@@ -1548,22 +1530,46 @@ function loadState(){
   state.migrations={brushTeeth:true,ptsFixed:true,sweepCorridor:true,dishes5:true,rollFix:true};
   state.settings=mergeSettings(null);
   state.dayLog=[];
-  state.ledger=[];
   state.adjustments=[];
   state.swapLog=[];
-  state.deleted={tx:[],adj:[]};
+  state.deleted={adj:[]};
   normalizeIds();
-  recalcAllXp();
+}
+
+/* One-way migration off the XP/wallet model. Old day rows keep their point
+   snapshot, which is all the minutes engine needs; XP, levels and the purse
+   are dropped outright. */
+function migrateToMinutes(){
+  let changed=false;
+  state.kids.forEach(k=>{ if('xp' in k){ delete k.xp; changed=true; } });
+  if('ledger' in state){ delete state.ledger; changed=true; }
+  state.dayLog.forEach(d=>{
+    Object.keys(d.kids||{}).forEach(id=>{
+      const row=d.kids[id];
+      if('xpDelta' in row){ delete row.xpDelta; changed=true; }
+      // A legacy per-kid grade becomes a flat percentage across that day's
+      // tasks, so historical days keep roughly the mark they were given.
+      if(row.multiplier!==undefined){
+        row.legacyPct=row.multiplier;
+        delete row.multiplier;
+        changed=true;
+      }
+      if(!Array.isArray(row.tasks)) row.tasks=row.tasks||[];
+      if(!row.pct||typeof row.pct!=='object') row.pct={};
+    });
+  });
+  ['breakEvenPct','xpPerfectDay','xpPerExtraPoint','currency','rewards','groupRewards'].forEach(k=>{
+    if(k in state.settings){ delete state.settings[k]; changed=true; }
+  });
+  if(changed) saveState();
 }
 
 /* Merge stored settings over defaults so new keys appear without wiping edits. */
 function mergeSettings(stored){
   const s={...DEFAULT_SETTINGS,...(stored||{})};
-  if(!Array.isArray(s.rewards)||s.rewards.length!==MAX_LEVEL+1) s.rewards=DEFAULT_REWARDS.map(r=>({...r,screens:{...r.screens}}));
-  if(!Array.isArray(s.groupRewards)||!s.groupRewards.length)   s.groupRewards=DEFAULT_GROUP_REWARDS.map(g=>({...g}));
-  s.breakEvenPct=clampNum(s.breakEvenPct,1,99,DEFAULT_SETTINGS.breakEvenPct);
-  s.xpPerfectDay=clampNum(s.xpPerfectDay,1,10000,DEFAULT_SETTINGS.xpPerfectDay);
-  s.xpPerExtraPoint=clampNum(s.xpPerExtraPoint,0,500,DEFAULT_SETTINGS.xpPerExtraPoint);
+  s.dailyMinutes=clampNum(s.dailyMinutes,1,1440,DEFAULT_SETTINGS.dailyMinutes);
+  s.sealHour=clampNum(s.sealHour,0,23,DEFAULT_SETTINGS.sealHour);
+  s.autoSeal=s.autoSeal!==false;
   s.editWindowDays=clampNum(s.editWindowDays,0,365,DEFAULT_SETTINGS.editWindowDays);
   return s;
 }
@@ -1824,11 +1830,20 @@ function saveState(){
 
 
 /* ============================================================
-   XP ENGINE
-   Source of truth is dayLog[].kids[kidId].multiplier.
-   Everything else (xpDelta, kid.xp, level) is replayed from it,
-   so re-grading a day can never double-award.
+   MINUTES ENGINE
+   Every kid can earn dailyMinutes of screen time per day. That
+   pot is split across the kid's own tasks in proportion to task
+   points, then each slice is scaled by that task's completion
+   percentage. A task left unticked is 0%; a ticked task is 100%
+   unless a parent says otherwise.
+
+   Source of truth is dayLog[].kids[kidId].{tasks, pct}. Minutes
+   are always recomputed from it, never stored, so an adjustment
+   can never double-award. Nothing banks across days.
    ============================================================ */
+
+function dailyMinutes(){ return clampNum(state.settings.dailyMinutes, 1, 1440, DAILY_MINUTES); }
+function sealHour(){     return clampNum(state.settings.sealHour, 0, 23, SEAL_HOUR); }
 
 function todayISO(d){
   const x=d?new Date(d):new Date();
@@ -1843,62 +1858,6 @@ function daysBetween(isoA,isoB){
   return Math.round((isoToDate(isoB)-isoToDate(isoA))/86400000);
 }
 
-/* ---- level maths ---- */
-function levelFromXp(xp){
-  for(let n=MAX_LEVEL;n>=0;n--){ if(xp>=xpForLevel(n)) return n; }
-  return 0;
-}
-function levelTitle(lvl){ return (state.settings.rewards[lvl]||{}).title||('Level '+lvl); }
-function xpIntoLevel(xp){
-  const l=levelFromXp(xp);
-  return xp-xpForLevel(l);
-}
-function xpSpanOfLevel(lvl){
-  if(lvl>=MAX_LEVEL) return 0;
-  return xpForLevel(lvl+1)-xpForLevel(lvl);
-}
-function xpToNextLevel(xp){
-  const l=levelFromXp(xp);
-  if(l>=MAX_LEVEL) return 0;
-  return xpForLevel(l+1)-xp;
-}
-function levelProgressPct(xp){
-  const l=levelFromXp(xp);
-  if(l>=MAX_LEVEL) return 100;
-  const span=xpSpanOfLevel(l);
-  return span>0?Math.min(100,Math.round((xpIntoLevel(xp)/span)*100)):0;
-}
-
-/* ---- multiplier -> XP ----
-   Two-segment linear curve pinned at the break-even point.
-   Gain and loss both cap at +/- xpPerfectDay.                       */
-/* One-off tasks pay on top of the day's mark, in proportion to how hard
-   they were — but only the ones actually ticked, and scaled by the mark,
-   so a sloppy car wash is worth less than a thorough one. */
-function extraXpFor(row){
-  if(!row) return 0;
-  const pts=Number(row.extraPts)||0;
-  if(pts<=0) return 0;
-  const m=Math.min(1,Math.max(0,Number(row.multiplier)??1));
-  return Math.round(pts*state.settings.xpPerExtraPoint*m);
-}
-/* Everything a kid earns for one day: the graded mark plus one-off bonuses. */
-function dayXpFor(row){
-  if(!row) return 0;
-  return xpDeltaFor(row.multiplier)+extraXpFor(row);
-}
-
-function xpDeltaFor(mult){
-  const b=state.settings.breakEvenPct/100;
-  const P=state.settings.xpPerfectDay;
-  const m=Math.min(1,Math.max(0,Number(mult)||0));
-  let f;
-  if(m>=b) f = (1-b)<=0 ? 1 : (m-b)/(1-b);
-  else     f = b<=0      ? 0 : (m-b)/b;
-  return Math.round(P*f);
-}
-
-/* ---- day log access ---- */
 function getDay(iso){ return state.dayLog.find(d=>d.date===iso)||null; }
 function getOrCreateDay(iso){
   let d=getDay(iso);
@@ -1909,103 +1868,86 @@ function committedDaysSorted(){
   return state.dayLog.filter(d=>d.committed).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);
 }
 
-/* ---- replay ---- */
-/* Sealed days and manual adjustments replayed together in the order they
-   actually happened, so an adjustment made on Tuesday sits between Monday's
-   and Tuesday's marks rather than being tacked on at the end. */
-function xpTimeline(){
-  const events=[];
-  committedDaysSorted().forEach(day=>{
-    const at=isoToDate(day.date).getTime()+86399999;   // end of that day
-    for(const kidId in day.kids) events.push({at,kidId,row:day.kids[kidId]});
+/* ---- the per-task snapshot everything else reads from ---- */
+
+/* A day's task list has to outlive the live board, or a sealed day
+   becomes ungradable the moment the next draw happens. */
+function taskSnapshotFor(kid){
+  const gi=state.kids.indexOf(kid);
+  const live=(state.assignments && state.today===new Date().toDateString())?(state.assignments[gi]||[]):[];
+  return live.map(t=>({ key:tickKey(t,kid.id), name:t.name, pts:t.pts||0,
+                        extra:!!t.extra, done:!!t.done }));
+}
+
+/* Largest-remainder split, so a fully completed day lands on exactly
+   dailyMinutes rather than 119 from rounding down five times. */
+function shareMinutes(tasks){
+  const pot=dailyMinutes();
+  const total=tasks.reduce((s,t)=>s+(t.pts||0),0);
+  if(!total) return tasks.map(()=>0);
+  const raw=tasks.map(t=>pot*(t.pts||0)/total);
+  const base=raw.map(v=>Math.floor(v));
+  let left=pot-base.reduce((a,b)=>a+b,0);
+  raw.map((v,i)=>({i,frac:v-Math.floor(v)}))
+     .sort((a,b)=>b.frac-a.frac)
+     .forEach(o=>{ if(left>0){ base[o.i]++; left--; } });
+  return base;
+}
+
+function pctForTask(row, t){
+  const stored=row&&row.pct&&row.pct[t.key];
+  if(stored!==undefined && stored!==null) return Math.min(1,Math.max(0,Number(stored)));
+  return t.done?1:0;
+}
+
+/* The whole reward model. Returns per-task lines plus the day's totals. */
+function minutesFor(iso, kid){
+  const row=dayRowFor(iso,kid);
+  const tasks=(row&&row.tasks)||[];
+  const share=shareMinutes(tasks);
+  const lines=tasks.map((t,i)=>{
+    const pct=pctForTask(row,t);
+    return {...t, pct, share:share[i], minutes:Math.round(share[i]*pct)};
   });
-  (state.adjustments||[]).forEach(a=>events.push({at:a.ts,kidId:a.kidId,adj:a}));
-  events.sort((x,y)=>x.at-y.at);
-  return events;
+  const allPts=lines.reduce((s,l)=>s+l.pts,0);
+  const wPts=lines.reduce((s,l)=>s+l.pts*l.pct,0);
+  return {
+    lines,
+    minutes: Math.min(dailyMinutes(), lines.reduce((s,l)=>s+l.minutes,0)),
+    donePct: allPts?Math.round((wPts/allPts)*100):0,
+    doneCount: lines.filter(l=>l.pct>0).length,
+    count: lines.length,
+    assignedPts: allPts,
+    completedPts: Math.round(wPts*10)/10,
+  };
 }
 
-function recalcAllXp(){
-  const xp={};
-  state.kids.forEach(k=>{ xp[k.id]=0; });
-  for(const ev of xpTimeline()){
-    if(xp[ev.kidId]===undefined) continue;             // kid was removed
-    const before=xp[ev.kidId];
-    const delta=ev.adj?Math.round(ev.adj.amount):dayXpFor(ev.row);
-    const after=Math.max(0,before+delta);              // clamp at 0, never negative
-    if(ev.row){
-      ev.row.xpDelta=delta;
-      ev.row.xpBonus=extraXpFor(ev.row);
-      ev.row.xpAfter=after;
-      ev.row.levelBefore=levelFromXp(before);
-      ev.row.levelAfter=levelFromXp(after);
-    } else {
-      ev.adj.xpAfter=after;
-      ev.adj.levelBefore=levelFromXp(before);
-      ev.adj.levelAfter=levelFromXp(after);
-    }
-    xp[ev.kidId]=after;
-  }
-  state.kids.forEach(k=>{ k.xp=xp[k.id]||0; });
+function fmtMinutes(m){
+  m=Math.max(0,Math.round(m));
+  if(m<60) return m+' min';
+  const h=Math.floor(m/60), r=m%60;
+  return r?`${h}h ${r}m`:`${h}h`;
 }
 
-/* ---- manual XP adjustments ----
-   Expressed as a percentage of the kid's current XP so the sting scales
-   with how much they have to lose. Stored as the resolved XP amount. */
-function adjustmentAmount(kid, pct){
-  return Math.round((kid.xp||0)*(pct/100));
+/* ---- parent adjustment ---- */
+function setTaskPct(iso, kidId, key, pct){
+  const day=getOrCreateDay(iso);
+  const row=day.kids[kidId]||(day.kids[kidId]={});
+  row.pct=row.pct||{};
+  row.pct[key]=Math.min(1,Math.max(0,Number(pct)));
+  row.adjustedAt=Date.now();
+  saveState();
 }
-function previewAdjustment(kid, pct){
-  const amount=adjustmentAmount(kid,pct);
-  const after=Math.max(0,(kid.xp||0)+amount);
-  return{amount, after,
-         levelBefore:levelFromXp(kid.xp||0),
-         levelAfter:levelFromXp(after)};
+function clearTaskPct(iso, kidId, key){
+  const day=getDay(iso);
+  const row=day&&day.kids[kidId];
+  if(row&&row.pct){ delete row.pct[key]; row.adjustedAt=Date.now(); saveState(); }
 }
-function applyAdjustment(kidId, pct, note){
-  const kid=state.kids.find(k=>k.id===kidId);
-  if(!kid||!pct) return null;
-  const before=levelFromXp(kid.xp||0);
-  const a={id:newId('adj'), kidId, pct, amount:adjustmentAmount(kid,pct),
-           iso:todayISO(), ts:Date.now(), note:note||''};
-  state.adjustments.push(a);
-  recalcAllXp(); saveState();
-  return{adj:a, levelBefore:before, levelAfter:levelFromXp(kid.xp||0)};
-}
-/* Put every active member on a given rank, at that rank's floor.
-   Recorded as one adjustment each, so it replays like any other change
-   and can be undone from the Ledger. */
-function setEveryoneToLevel(lvl){
-  lvl=Math.min(MAX_LEVEL,Math.max(0,Math.round(lvl)));
-  const target=xpForLevel(lvl);
-  const moved=[];
-  const ts=Date.now();
-  getActiveKids().forEach((kid,i)=>{
-    const amount=target-(kid.xp||0);
-    if(!amount) return;
-    const before=levelFromXp(kid.xp||0);
-    state.adjustments.push({
-      id:newId('adj'), kidId:kid.id, pct:null, amount,
-      iso:todayISO(), ts:ts+i, note:`Set to rank ${lvl} · ${rewardsAt(lvl).title}`
-    });
-    moved.push({kid, amount, before, after:lvl});
-  });
-  if(moved.length){ recalcAllXp(); saveState(); }
-  return moved;
+function isAdjusted(iso, kidId, key){
+  const row=(getDay(iso)||{kids:{}}).kids[kidId];
+  return !!(row&&row.pct&&row.pct[key]!==undefined);
 }
 
-function removeAdjustment(id){
-  const i=state.adjustments.findIndex(a=>a.id===id);
-  if(i<0) return;
-  state.adjustments.splice(i,1);
-  if(!state.deleted.adj.includes(id)) state.deleted.adj.push(id);
-  recalcAllXp(); saveState();
-}
-function recentAdjustments(kidId, limit){
-  return state.adjustments.filter(a=>a.kidId===kidId)
-    .sort((a,b)=>b.ts-a.ts).slice(0,limit||4);
-}
-
-/* ---- suggestion from the done checkboxes (links completion to grading) ---- */
 function dayPtsForKid(kid){
   const gi=state.kids.indexOf(kid);
   const tasks=(state.assignments&&state.today===new Date().toDateString())?(state.assignments[gi]||[]):[];
@@ -2019,112 +1961,60 @@ function dayPtsForKid(kid){
     extraCount:tasks.filter(t=>t.extra).length
   };
 }
-/* Purely what the checkboxes say for that day. */
-function ticksMultiplier(kid, iso){
-  iso=iso||todayISO();
-  const row=dayRowFor(iso,kid);
-  if(!row||!row.assignedPts) return 1;
-  return Math.round((row.completedPts/row.assignedPts)*20)/20;   // snap to 5%
-}
-/* What a slider should open at: the stored grade once a day is committed,
-   otherwise the tick-derived suggestion. */
-function suggestedMultiplier(kid, iso){
-  iso=iso||todayISO();
-  const day=getDay(iso);
-  const stored=day&&day.kids[kid.id];
-  if(day&&day.committed&&stored&&stored.multiplier!==undefined) return stored.multiplier;
-  return ticksMultiplier(kid,iso);
-}
 
-/* ---- commit ----
-   grades: { [kidId]: multiplier 0..1 }
-   Returns { levelUps:[], levelDowns:[] } for the celebration queue.  */
-function commitDay(iso, grades){
-  const before={};
-  state.kids.forEach(k=>{ before[k.id]=levelFromXp(k.xp); });
-
+/* ---- sealing ----
+   Sealing freezes the task list and the ticks. It awards nothing by
+   itself — minutes are derived — so re-sealing is always safe. */
+function commitDay(iso){
   const day=getOrCreateDay(iso);
+  const isToday=(iso===todayISO());
+  state.kids.forEach(kid=>{
+    const prev=day.kids[kid.id];
+    const snap=isToday?taskSnapshotFor(kid):null;
+    if(!prev && !(snap&&snap.length)) return;
+    const row=day.kids[kid.id]=prev||{};
+    if(snap&&snap.length) row.tasks=snap;
+    row.tasks=row.tasks||[];
+    row.pct=row.pct||{};
+    if(isToday) Object.assign(row, dayPtsForKid(kid));
+  });
   day.committed=true;
   day.sealedAt=Date.now();
-  const isToday=(iso===todayISO());
-  for(const kidId in grades){
-    const kid=state.kids.find(k=>k.id===kidId);
-    if(!kid) continue;
-    const prev=day.kids[kidId]||{};
-    // Only today has live task data. A past day keeps the snapshot it
-    // recorded while it was live, rather than being overwritten with zeros.
-    const snap=isToday?dayPtsForKid(kid):{};
-    day.kids[kidId]={
-      ...prev, ...snap,
-      multiplier: Math.min(1,Math.max(0,Number(grades[kidId])||0)),
-      assignedPts:   snap.assignedPts   ?? prev.assignedPts   ?? 0,
-      completedPts:  snap.completedPts  ?? prev.completedPts  ?? 0,
-      assignedCount: snap.assignedCount ?? prev.assignedCount ?? 0,
-      completedCount:snap.completedCount?? prev.completedCount?? 0,
-      extraPts:      snap.extraPts      ?? prev.extraPts      ?? 0,
-      extraCount:    snap.extraCount    ?? prev.extraCount    ?? 0,
-    };
-  }
-  recalcAllXp();
   saveState();
-
-  const levelUps=[],levelDowns=[];
-  state.kids.forEach(k=>{
-    const after=levelFromXp(k.xp);
-    if(after>before[k.id]) levelUps.push({kid:k,from:before[k.id],to:after});
-    else if(after<before[k.id]) levelDowns.push({kid:k,from:before[k.id],to:after});
-  });
-  return{levelUps,levelDowns};
+  return day;
 }
 
-/* Re-grade an already committed day. Same call path — replay handles the rest. */
+function unsealDay(iso){
+  const day=getDay(iso);
+  if(!day) return;
+  day.committed=false;
+  day.sealedAt=0;
+  saveState();
+}
+
 function canEditDay(iso){
   const age=daysBetween(iso,todayISO());
-  return age>=0 && age<=state.settings.editWindowDays;
+  return age>=0 && age<=clampNum(state.settings.editWindowDays,0,365,7);
 }
 function pendingDays(){
-  // Days that have a log row but were never committed, within the edit window.
   return state.dayLog.filter(d=>!d.committed&&canEditDay(d.date)).map(d=>d.date).sort();
 }
 
-/* ---- rewards ---- */
-function rewardsAt(lvl){ return state.settings.rewards[Math.min(MAX_LEVEL,Math.max(0,lvl))]; }
-function nextRewardFor(xp){
-  const l=levelFromXp(xp);
-  return l>=MAX_LEVEL?null:rewardsAt(l+1);
-}
-function screenMinutes(kid){ return rewardsAt(levelFromXp(kid.xp)).screens; }
-function weeklyAllowance(kid){ return rewardsAt(levelFromXp(kid.xp)).allowance; }
-function formatMoney(v){ return state.settings.currency+Number(v).toFixed(2).replace('.',','); }
-
-/* ---- group ---- */
-function groupTier(){
-  const act=getActiveKids();
-  if(!act.length) return 0;
-  return Math.min(...act.map(k=>levelFromXp(k.xp)));
-}
-function blockingKids(){
-  const act=getActiveKids();
-  if(!act.length) return [];
-  const tier=groupTier();
-  return act.filter(k=>levelFromXp(k.xp)===tier);
-}
-function unlockedGroupRewards(){
-  const tier=groupTier();
-  return state.settings.groupRewards.filter(g=>tier>=g.lvl);
-}
-function nextGroupReward(){
-  const tier=groupTier();
-  return state.settings.groupRewards.filter(g=>tier<g.lvl).sort((a,b)=>a.lvl-b.lvl)[0]||null;
-}
-/* XP the weakest link still needs to unlock the next group reward. */
-function groupGapXp(){
-  const nx=nextGroupReward();
-  if(!nx) return 0;
-  const need=xpForLevel(nx.lvl);
-  const act=getActiveKids();
-  if(!act.length) return 0;
-  return Math.max(...act.map(k=>Math.max(0,need-k.xp)));
+/* Seals anything whose cutoff has passed. Runs on load, on a timer and
+   after every pull, so a day seals even if no device was open at 18:00. */
+function sealDueDays(){
+  if(state.settings.autoSeal===false) return [];
+  const iso=todayISO();
+  const due=[];
+  state.dayLog.forEach(d=>{ if(!d.committed && d.date<iso) due.push(d.date); });
+  if(new Date().getHours()>=sealHour()){
+    const t=getDay(iso);
+    const hasBoard=!!(state.assignments && state.today===new Date().toDateString());
+    if((t&&!t.committed) || (hasBoard&&!t)) due.push(iso);
+  }
+  const uniq=[...new Set(due)].filter(canEditDay).sort();
+  uniq.forEach(d=>commitDay(d));
+  return uniq;
 }
 
 /* AUDIO */
@@ -2273,19 +2163,18 @@ function renderHome(){
   state.kids.forEach((kid,i)=>{
     const div=document.createElement('div');
     div.className='kid-toggle'+(kid.active?' active':'')+(kid.name===last?' fewer-last':'');
-    const lvl=levelFromXp(kid.xp||0), col=kidColor(i);
-    const pct=levelProgressPct(kid.xp||0);
-    const nextTxt=lvl>=MAX_LEVEL?'Highest rank held':`${xpToNextLevel(kid.xp||0)} xp to ${levelTitle(lvl+1)}`;
+    const col=kidColor(i);
+    const m=minutesFor(todayISO(),kid);
+    const pct=Math.round(m.minutes/dailyMinutes()*100);
     div.innerHTML=`<div class="inactive-x">Away</div><span class="kid-avatar">${kid.avatar}</span><span class="kid-name">${esc(kid.name)}</span>`+
-      `<span class="lvl-title" style="color:${col}">${esc(levelTitle(lvl))}</span>`+
+      `<span class="lvl-title" style="color:${col}">${fmtMinutes(m.minutes)}</span>`+
       `<span class="kid-status">${kid.active?'Answering':'Away'}</span>`+
       `<div class="xp-bar"><div class="xp-fill" style="width:${pct}%;background:${col}"></div></div>`+
-      `<div class="xp-meta">Rank ${lvl} · ${kid.xp||0} xp · ${esc(nextTxt)}</div>`+
+      `<div class="xp-meta">${m.count?`${m.doneCount}/${m.count} tasks · ${m.donePct}%`:'No board today'}</div>`+
       `<div class="fewer-badge">Lighter last time</div>`;
     div.addEventListener('click',()=>{playClick();kid.active=!kid.active;saveState();renderHome();});
     grid.appendChild(div);
   });
-  renderGroupPanel(document.getElementById('groupBanner'), false);
   const{total,target}=calcPoints();
   const n=getActiveKids().length;
   document.getElementById('totalPts').textContent=total;
@@ -2470,10 +2359,20 @@ function renderQuest(){
           requirePin(()=>removeExtraTask(gi,task._id));
         });
         item.addEventListener('click',()=>{
-          setTick(gi,task,!task.done);touchTodayLog();saveState();
-          task.done?playCheck():playUncheck();
-          item.classList.toggle('checked',task.done);
-          item.querySelector('.task-checkbox').textContent=task.done?'✓':'';
+          if((getDay(todayISO())||{}).committed && !questEditing){
+            showToast('Today is sealed. Break the seal to change ticks.');
+            return;
+          }
+          // buildBoard() inside setTick swaps every task object out, so the
+          // captured `task` is stale the moment the tick lands. Decide the
+          // next value up front and drive both the write and the DOM from it.
+          const next=!task.done;
+          setTick(gi,task,next);
+          task.done=next;
+          touchTodayLog();saveState();
+          next?playCheck():playUncheck();
+          item.classList.toggle('checked',next);
+          item.querySelector('.task-checkbox').textContent=next?'✓':'';
           updateKidProgress(gi,localIdx);refreshSuggestion(kid,localIdx);checkAllDone();
         });
         td.appendChild(item);
@@ -2498,57 +2397,45 @@ function renderQuestCommit(){
   const committed=!!(day&&day.committed);
 
   if(committed&&!questEditing){
-    const earned=kids.map(k=>{
-      const row=day.kids[k.id];
-      return row?`${k.avatar} ${row.xpDelta>0?'+':''}${row.xpDelta}`:null;
-    }).filter(Boolean).join('  ·  ');
+    const earned=kids.map(k=>`${k.avatar} ${minutesFor(iso,k).minutes}m`).join('  ·  ');
     bar.innerHTML=`<div class="commit-note" style="font-size:0.9rem;color:var(--moss);font-weight:900;margin-bottom:12px">
 Sealed today &nbsp;·&nbsp; ${earned}
       </div>
       <button class="btn-commit" id="questEditBtn" style="background:var(--stone-2);color:var(--text);box-shadow:none">Break the seal</button>`;
     document.getElementById('questEditBtn').addEventListener('click',()=>{
       playClick();
-      requirePin(()=>{ questEditing=true; clearDraft(iso); renderQuest(); });
+      requirePin(()=>{ questEditing=true; unsealDay(iso); renderQuest(); });
     });
     return;
   }
 
-  bar.innerHTML=`<button class="btn-commit" id="questCommitBtn">${committed?'Re-seal the day':'Seal the day'}</button>
-    <div class="commit-note">${committed
-      ? 'Re-sealing replaces the stored mark. Experience is never awarded twice.'
-      : 'Seal whenever you like. Unticked chores just mean a lower mark, not a blocked day.'}</div>`;
+  const auto=state.settings.autoSeal!==false;
+  bar.innerHTML=`<button class="btn-commit" id="questCommitBtn">${committed?'Re-seal the day':'Seal the day now'}</button>
+    <div class="commit-note">${auto
+      ? `The day seals itself at ${String(sealHour()).padStart(2,'0')}:00. Anything unticked counts as 0%.`
+      : 'Auto-seal is off — seal by hand when the day is done.'}</div>`;
   document.getElementById('questCommitBtn').addEventListener('click',()=>{
-    commitDayUI(iso,kids,()=>{ questEditing=false; clearDraft(iso); renderQuest(); });
+    commitDayUI(iso,kids,()=>{ questEditing=false; renderQuest(); });
   });
 }
 
 /* Re-seed an untouched slider as tasks get ticked, but never override a
    value the parent has already set by hand. */
 function refreshSuggestion(kid,localIdx){
-  const iso=todayISO();
-  const day=getDay(iso);
-  if(day&&day.committed&&!questEditing) return;
-  const d=draftFor(iso);
-  const card=document.getElementById('kid-card-'+state.kids.indexOf(kid));
-  if(!card) return;
-  const block=card.querySelector('.grade-inline');
-  if(!block||block.dataset.touched==='1'){ return; }
-  const sug=ticksMultiplier(kid,iso);
-  d[kid.id]=sug;
-  const slider=block.querySelector('.gc-slider');
-  const pctEl=block.querySelector('.gc-pct');
-  const sumEl=block.querySelector('.gc-summary');
-  const row=dayRowFor(iso,kid)||{};
-  if(slider){ slider.value=Math.round(sug*100); }
-  if(pctEl) pctEl.textContent=Math.round(sug*100)+'%';
-  if(sumEl) sumEl.textContent=`${row.completedCount||0} of ${row.assignedCount||0} ticked · ${row.completedPts||0}/${row.assignedPts||0} pts`;
-  const qb=block.querySelector('.gc-quick button[data-set="suggest"]');
-  if(qb) qb.textContent=`↺ From ticks (${Math.round(sug*100)}%)`;
-  renderGradePreview(block.querySelector('.gc-preview'),iso,kid);
+  // The per-task sliders read live from state, so ticking a box just needs
+  // the minutes headline repainted.
+  const card=document.getElementById(`kid-card-${state.kids.indexOf(kid)}`);
+  const panel=card&&card.querySelector('.grade-inline');
+  if(!panel||panel.dataset.open==='1') return;
+  const m=minutesFor(todayISO(),kid);
+  const head=panel.querySelector('.mins-headline');
+  const sum=panel.querySelector('.gc-summary');
+  if(head) head.textContent=fmtMinutes(m.minutes);
+  if(sum) sum.textContent=`${m.doneCount} of ${m.count} tasks · ${m.donePct}% complete · out of ${fmtMinutes(dailyMinutes())}`;
 }
-
 function updateKidProgress(gi,localIdx){
-  const tasks=state.assignments[gi]||[];
+  const tasks=(state.assignments&&state.assignments[gi])||[];
+  if(!document.getElementById(`pts-c-${gi}`)) return;
   const done=tasks.filter(t=>t.done).reduce((s,t)=>s+t.pts,0);
   const total=tasks.reduce((s,t)=>s+t.pts,0);
   document.getElementById(`pts-c-${gi}`).textContent=done;
@@ -2907,104 +2794,6 @@ document.getElementById('saveSettings').addEventListener('click',()=>{saveState(
 
 
 /* ============================================================
-   MONEY LEDGER
-   Balance is always the sum of the ledger — never stored directly,
-   so it cannot drift out of sync with its own history.
-   ============================================================ */
-
-function walletBalance(kidId){
-  return state.ledger.reduce((s,t)=>t.kidId===kidId?s+t.amount:s,0);
-}
-function walletTx(kidId,limit){
-  const rows=state.ledger.filter(t=>t.kidId===kidId).sort((a,b)=>b.ts-a.ts);
-  return limit?rows.slice(0,limit):rows;
-}
-function addTx(kidId,amount,note,kind,weekKey){
-  const t={id:newId('tx'),kidId,amount:Math.round(Number(amount)*100)/100,
-           note:note||'',kind:kind||'adjust',date:todayISO(),ts:Date.now()};
-  if(weekKey) t.week=weekKey;
-  state.ledger.push(t);
-  return t;
-}
-function removeTx(txId){
-  const i=state.ledger.findIndex(t=>t.id===txId);
-  if(i>=0) state.ledger.splice(i,1);
-  if(!state.deleted.tx.includes(txId)) state.deleted.tx.push(txId);
-}
-function totalWallets(){
-  return state.kids.reduce((s,k)=>s+walletBalance(k.id),0);
-}
-
-/* ---- weekly allowance ----
-   A week is keyed by the Sunday that closes it. Payout becomes available
-   that Sunday at 20:00, and the level used is the kid's level as of the
-   end of that week — so paying late can't be gamed by grinding XP after. */
-const PAYOUT_HOUR = 20;
-
-function sundayOf(d){
-  const x=new Date(d); x.setHours(0,0,0,0);
-  x.setDate(x.getDate()+(7-x.getDay())%7);   // forward to Sunday (0=Sun)
-  return x;
-}
-function weekKeyFor(iso){ return 'W'+todayISO(sundayOf(isoToDate(iso))); }
-function weekLabel(key){
-  const end=isoToDate(key.slice(1));
-  const start=new Date(end); start.setDate(start.getDate()-6);
-  const f=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-  return f(start)+' – '+f(end);
-}
-function isWeekPaid(key){ return state.ledger.some(t=>t.kind==='allowance'&&t.week===key); }
-
-/* Replay XP up to and including a date, so historic levels are exact. */
-function xpAtDate(kidId, iso){
-  const cutoff=isoToDate(iso).getTime()+86399999;
-  let xp=0;
-  for(const ev of xpTimeline()){
-    if(ev.at>cutoff) break;
-    if(ev.kidId!==kidId) continue;
-    xp=Math.max(0,xp+(ev.adj?Math.round(ev.adj.amount):dayXpFor(ev.row)));
-  }
-  return xp;
-}
-function levelAtDate(kidId, iso){ return levelFromXp(xpAtDate(kidId,iso)); }
-
-/* Weeks that are due and not yet paid (looks back 8 weeks max). */
-function duePayouts(){
-  const out=[];
-  const days=committedDaysSorted();
-  if(!days.length) return out;
-  const firstIso=days[0].date;
-  const now=new Date();
-  let s=sundayOf(now);
-  const cutoff=new Date(s); cutoff.setHours(PAYOUT_HOUR,0,0,0);
-  if(now<cutoff) s.setDate(s.getDate()-7);          // this week's payout hasn't landed yet
-  for(let i=0;i<8;i++){
-    const iso=todayISO(s);
-    if(iso<firstIso) break;
-    const key='W'+iso;
-    if(!isWeekPaid(key)){
-      const lines=getActiveKids().map(k=>({kid:k,lvl:levelAtDate(k.id,iso)}))
-        .map(x=>({...x,amount:rewardsAt(x.lvl).allowance}))
-        .filter(x=>x.amount>0);
-      out.push({key,endIso:iso,lines,total:lines.reduce((a,b)=>a+b.amount,0)});
-    }
-    s.setDate(s.getDate()-7);
-  }
-  return out.reverse();
-}
-function payWeek(key){
-  if(isWeekPaid(key)) return 0;
-  const due=duePayouts().find(d=>d.key===key);
-  if(!due) return 0;
-  due.lines.forEach(l=>{
-    addTx(l.kid.id,l.amount,`Weekly allowance · Lvl ${l.lvl} · ${weekLabel(key)}`,'allowance',key);
-  });
-  saveState();
-  return due.total;
-}
-
-
-/* ============================================================
    SUPABASE SYNC
    Offline-first: localStorage is the working store and the app is
    fully usable with no network. The server is a sync layer that
@@ -3036,7 +2825,7 @@ let syncDirty = {};             // key -> true, awaiting push
 let syncSnapshots = {};         // key -> JSON we last had in agreement with the server
 let syncServerAt = {};          // key -> updated_at we last saw
 
-const SYNC_KEYS = ['cq_config','cq_today','cq_progress','cq_money','cq_swaps'];
+const SYNC_KEYS = ['cq_config','cq_today','cq_progress','cq_swaps'];
 const SYNC_META = 'chorequest_sync';
 
 /* ---- slicing state into rows ---- */
@@ -3047,7 +2836,6 @@ function sliceFor(key){
                                 pin:getStoredPin()||null};
     case 'cq_today':    return {roll:state.roll, fewerHistory:state.fewerHistory};
     case 'cq_progress': return {dayLog:state.dayLog, adjustments:state.adjustments, adjDeleted:state.deleted.adj};
-    case 'cq_money':    return {ledger:state.ledger, txDeleted:state.deleted.tx};
     case 'cq_swaps':    return {swapLog:state.swapLog};
   }
   return {};
@@ -3113,10 +2901,6 @@ function applyRemote(key, remote, theirsNewer){
       state.dayLog      = mergeDayLog(state.dayLog, remote.dayLog);
       state.adjustments = mergeById(state.adjustments, remote.adjustments, state.deleted.adj);
       break;
-    case 'cq_money':
-      state.deleted.tx = [...new Set([...(state.deleted.tx||[]), ...(remote.txDeleted||[])])];
-      state.ledger     = mergeById(state.ledger, remote.ledger, state.deleted.tx);
-      break;
     case 'cq_swaps':
       state.swapLog = mergeById(state.swapLog, remote.swapLog).sort((a,b)=>a.ts-b.ts);
       break;
@@ -3175,7 +2959,7 @@ async function syncPull(){
   if(changed){
     normalizeIds();
     if(roomsLookCorrupt()) repairRooms();
-    recalcAllXp();
+    sealDueDays();
     localStorage.setItem('chorequest_v4', JSON.stringify(stateForStorage()));
   }
   return changed;
@@ -3310,10 +3094,10 @@ function touchTodayLog(){
   getActiveKids().forEach(kid=>{
     const live=dayPtsForKid(kid);
     const prev=day.kids[kid.id]||{};
-    day.kids[kid.id]={...prev,
-      assignedPts:live.assignedPts, completedPts:live.completedPts,
-      assignedCount:live.assignedCount, completedCount:live.completedCount,
-      extraPts:live.extraPts, extraCount:live.extraCount};
+    day.kids[kid.id]={...prev, ...live,
+      // The snapshot is what keeps a day adjustable after the next draw.
+      tasks: taskSnapshotFor(kid),
+      pct: prev.pct||{}};
   });
 }
 
@@ -3442,144 +3226,87 @@ function submitExtraTask(){
   showToast(`"${name}" added to ${n} kid${n>1?'s':''}.`);
 }
 
-/* ── GRADING ──────────────────────────────────────────────────────
-   Sliders live inline under each kid's task list. Draft values are held
-   in memory only and are never persisted, so a kid moving a slider
-   changes nothing — only the PIN-gated commit writes XP. */
-let gradeDrafts = {};   // iso -> { kidId: multiplier }
 
-function draftFor(iso){
-  if(!gradeDrafts[iso]) gradeDrafts[iso]={};
-  return gradeDrafts[iso];
-}
-function seedDraft(iso, kids){
-  const d=draftFor(iso);
-  kids.forEach(kid=>{ if(d[kid.id]===undefined) d[kid.id]=suggestedMultiplier(kid,iso); });
-  return d;
-}
-function clearDraft(iso){ delete gradeDrafts[iso]; }
-
-function dayRowFor(iso, kid){
-  const day=getDay(iso);
-  const row=(day&&day.kids[kid.id])||null;
-  if(row) return row;
-  if(iso===todayISO()){
-    const live=dayPtsForKid(kid);
-    if(live.assignedCount>0) return live;
-  }
-  return null;
-}
-
-function gradableDays(){
-  const set=new Set();
-  if(state.assignments && state.today===new Date().toDateString()) set.add(todayISO());
-  state.dayLog.forEach(d=>{ if(canEditDay(d.date)) set.add(d.date); });
-  return [...set].sort().reverse();
-}
-function prettyDay(iso){
-  const t=todayISO();
-  if(iso===t) return 'Today';
-  if(daysBetween(iso,t)===1) return 'Yesterday';
-  return isoToDate(iso).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-}
-
-/* Builds the slider + preview block for one kid on one day.
-   Grading never requires every task to be ticked — the ticks only
-   seed a suggestion, which the parent is free to override. */
+/* Per-task completion. The parent opens it with the PIN, then each task
+   has its own 0-100% slider. 100% is the default for anything ticked,
+   0% for anything not. The percentage scales that task's minutes only. */
 function buildGradeControls(iso, kid, col, locked){
-  const d=seedDraft(iso,[kid]);
-  const row=dayRowFor(iso,kid)||{assignedPts:0,completedPts:0,assignedCount:0,completedCount:0};
-  const pct=Math.round((d[kid.id]??1)*100);
   const el=document.createElement('div');
   el.className='grade-inline';
-  el.innerHTML=`
-    <div class="gi-label">
-      <span>Quality of work</span>
-      ${locked?'<span class="gi-locked">Sealed</span>':''}
-    </div>
-    <div class="gc-summary">${row.completedCount||0} of ${row.assignedCount||0} ticked · ${row.completedPts||0}/${row.assignedPts||0} pts</div>
-    <div class="gc-slider-row">
-      <input type="range" class="gc-slider" min="0" max="100" step="5" value="${pct}" ${locked?'disabled':''}>
-      <span class="gc-pct" style="color:${col}">${pct}%</span>
-    </div>
-    ${locked?'':`<div class="gc-quick">
-      <button data-set="suggest">From ticks · ${Math.round(ticksMultiplier(kid,iso)*100)}%</button>
-      <button data-set="1">100%</button>
-      <button data-set="${state.settings.breakEvenPct/100}">Break even</button>
-    </div>`}
-    <div class="gc-preview"></div>`;
+  const paint=()=>{
+    const m=minutesFor(iso,kid);
+    const open=el.dataset.open==='1';
+    el.innerHTML=`
+      <div class="gi-label">
+        <span>Screen time earned</span>
+        ${locked?'<span class="gi-locked">Sealed</span>':''}
+      </div>
+      <div class="mins-headline" style="color:${col}">${fmtMinutes(m.minutes)}</div>
+      <div class="gc-summary">${m.doneCount} of ${m.count} tasks · ${m.donePct}% complete · out of ${fmtMinutes(dailyMinutes())}</div>
+      <button class="gc-adjust">${open?'Hide adjustments':'Adjust completion'}</button>
+      <div class="gc-tasks"${open?'':' hidden'}></div>`;
 
-  const slider=el.querySelector('.gc-slider');
-  const pctEl=el.querySelector('.gc-pct');
-  const prev=el.querySelector('.gc-preview');
-  slider.style.accentColor=col;
-  const paint=()=>renderGradePreview(prev,iso,kid);
-  slider.addEventListener('input',e=>{
-    d[kid.id]=Number(e.target.value)/100;
-    pctEl.textContent=e.target.value+'%';
-    el.dataset.touched='1';
-    paint();
-  });
-  el.querySelectorAll('.gc-quick button').forEach(b=>{
-    b.addEventListener('click',()=>{
+    el.querySelector('.gc-adjust').addEventListener('click',()=>{
       playClick();
-      const v=b.dataset.set==='suggest'?ticksMultiplier(kid,iso):Number(b.dataset.set);
-      d[kid.id]=Math.round(v*20)/20;
-      slider.value=Math.round(d[kid.id]*100);
-      pctEl.textContent=slider.value+'%';
-      el.dataset.touched=b.dataset.set==='suggest'?'0':'1';
-      paint();
+      if(open){ el.dataset.open='0'; paint(); return; }
+      requirePin(()=>{ el.dataset.open='1'; paint(); });
     });
-  });
+
+    if(!open) return;
+    const wrap=el.querySelector('.gc-tasks');
+    if(!m.lines.length){
+      wrap.innerHTML='<div class="tx-empty">No tasks recorded for this day.</div>';
+      return;
+    }
+    m.lines.forEach(line=>{
+      const pct=Math.round(line.pct*100);
+      const row=document.createElement('div');
+      row.className='gc-task';
+      row.innerHTML=`
+        <div class="gc-task-top">
+          <span class="gc-task-name">${esc(line.name)}</span>
+          <span class="gc-task-pts">${line.pts}pt · max ${line.share}m</span>
+        </div>
+        <div class="gc-slider-row">
+          <input type="range" class="gc-slider" min="0" max="100" step="5" value="${pct}">
+          <span class="gc-pct" style="color:${col}">${pct}%</span>
+          <span class="gc-task-min">${line.minutes}m</span>
+        </div>`;
+      const sl=row.querySelector('.gc-slider');
+      sl.style.accentColor=col;
+      const pctEl=row.querySelector('.gc-pct'), minEl=row.querySelector('.gc-task-min');
+      sl.addEventListener('input',e=>{
+        const v=Number(e.target.value);
+        pctEl.textContent=v+'%';
+        minEl.textContent=Math.round(line.share*v/100)+'m';
+      });
+      sl.addEventListener('change',e=>{
+        setTaskPct(iso,kid.id,line.key,Number(e.target.value)/100);
+        el.dataset.open='1';
+        paint();
+        refreshVisibleScreen();
+      });
+      wrap.appendChild(row);
+    });
+  };
+  el.dataset.open='0';
   paint();
   return el;
 }
 
-/* For a committed day the delta shown is relative to the stored grade,
-   so the parent sees the true effect of an edit rather than a re-award. */
-function renderGradePreview(el, iso, kid){
-  if(!el) return;
-  const mult=draftFor(iso)[kid.id]??1;
-  const day=getDay(iso);
-  const stored=(day&&day.committed&&day.kids[kid.id])?day.kids[kid.id]:null;
-  const row=dayRowFor(iso,kid)||{};
-  const probe={...row, multiplier:mult};
-  const bonus=extraXpFor(probe);
-  const newDelta=xpDeltaFor(mult)+bonus;
-  const shift=newDelta-(stored?dayXpFor(stored):0);
-  const projected=Math.max(0,kid.xp+shift);
-  const lvlNow=levelFromXp(kid.xp), lvlNew=levelFromXp(projected);
-  const cls=newDelta>0?'up':newDelta<0?'down':'flat';
-  let move;
-  if(lvlNew>lvlNow) move=`<span style="color:var(--moss)">▲ LEVEL UP → ${esc(levelTitle(lvlNew))}</span>`;
-  else if(lvlNew<lvlNow) move=`<span style="color:var(--ember)">▼ drops to ${esc(levelTitle(lvlNew))}</span>`;
-  else if(lvlNew>=MAX_LEVEL) move='Max level';
-  else move=`${xpForLevel(lvlNew+1)-projected} xp to ${esc(levelTitle(lvlNew+1))}`;
-  el.innerHTML=`<span class="gc-delta ${cls}">${newDelta>0?'+':''}${newDelta} xp</span>`+
-    (bonus>0?`<span class="gc-bonus">${probe.extraPts} one-off pts · +${bonus}</span>`:'')+
-    `<span class="gc-outcome">→ ${projected} xp · rank ${lvlNew} · ${move}</span>`;
-}
-
-/* PIN-gated commit. onDone lets each caller re-render its own surface. */
+/* Sealing is PIN-gated. It awards nothing on its own — minutes are always
+   derived — so this only freezes the task list and the ticks. */
 async function commitDayUI(iso, kids, onDone){
   playClick();
   // A phone may be holding a board from breakfast. Pull before sealing so a
   // tick made on the tablet an hour ago is not silently overwritten.
   if(syncUser && syncReady){ await syncNow({quiet:true}); }
-  if(!hasPin()){
-    showToast('Set a parent PIN first — grading must be locked.');
-    openPinModal('set-new',()=>{ showToast('PIN set. Confirm the day again.'); });
-    return;
-  }
   requirePin(()=>{
-    const d=draftFor(iso);
-    const grades={};
-    kids.forEach(k=>{ grades[k.id]=d[k.id]??suggestedMultiplier(k,iso); });
-    const{levelUps,levelDowns}=commitDay(iso,grades);
+    commitDay(iso);
     renderHome();
     if(onDone) onDone();
-    queueLevelCards([...levelUps.map(x=>({...x,dir:'up'})),...levelDowns.map(x=>({...x,dir:'down'}))]);
-    if(!levelUps.length&&!levelDowns.length){ playSeal(); showToast('Day sealed. Experience awarded.'); }
+    playSeal();
+    showToast('Day sealed.');
   });
 }
 
@@ -3588,161 +3315,72 @@ function openDashboard(){ renderDashboard(); showScreen('dash'); }
 
 function renderDashboard(){
   const grid=document.getElementById('dashGrid');
+  const iso=todayISO();
+  const totals=getActiveKids().map(k=>minutesFor(iso,k).minutes);
+  const sum=totals.reduce((a,b)=>a+b,0);
   document.getElementById('dashSubtitle').textContent=
-    `${getActiveKids().length} answering the call · ${formatMoney(totalWallets())} held in purses`;
+    `${getActiveKids().length} answering the call · ${fmtMinutes(sum)} earned today`;
 
-  renderPayoutPanel();
   renderPendingPanel();
   renderSwapLog();
-  renderGroupPanel(document.getElementById('dashGroup'), true);
 
   grid.innerHTML='';
   state.kids.forEach((kid,i)=>{
-    const col=kidColor(i), lvl=levelFromXp(kid.xp||0), r=rewardsAt(lvl);
-    const bal=walletBalance(kid.id);
+    const col=kidColor(i);
+    const m=minutesFor(iso,kid);
     const card=document.createElement('div');
     card.className='dash-card';
     card.style.borderLeftColor=col;
     if(!kid.active) card.style.opacity='0.55';
+
+    const hist=lastDays(7).map(d=>{
+      const h=minutesFor(d,kid);
+      return {iso:d, minutes:h.minutes, pct:h.donePct, has:h.count>0};
+    }).filter(h=>h.has);
+    const avg=hist.length?Math.round(hist.reduce((s,h)=>s+h.minutes,0)/hist.length):0;
+
     card.innerHTML=`
       <div class="dc-top">
         <span class="dc-avatar">${kid.avatar}</span>
         <div class="dc-id">
           <div class="dc-name" style="color:${col}">${esc(kid.name)}</div>
-          <div class="dc-title">${esc(r.title)} · ${kid.xp||0} XP${kid.active?'':' · out'}</div>
-          <div class="xp-bar"><div class="xp-fill" style="width:${levelProgressPct(kid.xp||0)}%;background:${col}"></div></div>
+          <div class="dc-title">${m.doneCount}/${m.count} tasks today${kid.active?'':' · out'}</div>
+          <div class="xp-bar"><div class="xp-fill" style="width:${Math.round(m.minutes/dailyMinutes()*100)}%;background:${col}"></div></div>
         </div>
-        <div class="dc-lvl" style="color:${col}">${lvl}<small>Rank</small></div>
+        <div class="dc-lvl" style="color:${col}">${m.minutes}<small>min today</small></div>
       </div>
       <div class="dc-stats">
-        <div class="dc-stat"><div class="dc-stat-v">${r.screens.tv}</div><div class="dc-stat-l">📺 TV</div></div>
-        <div class="dc-stat"><div class="dc-stat-v">${r.screens.xbox}</div><div class="dc-stat-l">🎮 Xbox</div></div>
-        <div class="dc-stat"><div class="dc-stat-v">${r.screens.pc}</div><div class="dc-stat-l">💻 PC</div></div>
-        <div class="dc-stat"><div class="dc-stat-v">${lvl>=MAX_LEVEL?'—':xpToNextLevel(kid.xp||0)}</div><div class="dc-stat-l">xp to next</div></div>
+        <div class="dc-stat"><div class="dc-stat-v">${m.donePct}%</div><div class="dc-stat-l">completed</div></div>
+        <div class="dc-stat"><div class="dc-stat-v">${dailyMinutes()-m.minutes}</div><div class="dc-stat-l">min lost</div></div>
+        <div class="dc-stat"><div class="dc-stat-v">${avg}</div><div class="dc-stat-l">7-day avg</div></div>
         <div class="dc-stat"><div class="dc-stat-v">${swapsFor(kid.id).filter(s=>s.outcome==='accepted').length}</div><div class="dc-stat-l">Trades</div></div>
       </div>
-      <div class="dc-wallet">
-        <div class="dc-bal ${bal===0?'zero':''}">${formatMoney(bal)}</div>
-        <div class="dc-rate">${r.allowance>0?formatMoney(r.allowance)+' each week':'no allowance yet'}</div>
-      </div>
-      <div class="dc-money-row">
-        <input class="input-sm amt" type="number" step="0.5" min="0" placeholder="0,00">
-        <input class="input-sm note" type="text" placeholder="What for?">
-        <button class="btn-money add">＋</button>
-        <button class="btn-money spend">－</button>
-      </div>
-      <div class="tx-list"></div>
-      <div class="adj-block">
-        <div class="adj-head">
-          <span>Experience</span>
-          <button class="adj-toggle">Adjust</button>
-        </div>
-        <div class="adj-body">
-          <div class="adj-slider-row">
-            <input type="range" class="adj-slider" min="-50" max="50" step="5" value="0">
-            <span class="adj-pct zero">0%</span>
-          </div>
-          <div class="adj-preview"></div>
-          <div class="adj-actions">
-            <input class="input-sm adj-note" type="text" placeholder="Why? (e.g. broke a rule)">
-            <button class="btn-adj" disabled>Apply</button>
-          </div>
-          <div class="adj-log"></div>
-        </div>
-      </div>`;
+      <div class="mins-history"></div>`;
     grid.appendChild(card);
 
-    const amt=card.querySelector('.amt'), note=card.querySelector('.note');
-    const doTx=sign=>{
-      const v=Math.abs(Number(amt.value));
-      if(!v){ showToast('Enter an amount first.'); return; }
-      playClick();
-      requirePin(()=>{
-        addTx(kid.id, sign*v, note.value.trim()||(sign>0?'Added':'Spent'), sign>0?'bonus':'spend');
-        saveState(); renderDashboard(); playCoin();
-        showToast(`${sign>0?'Added':'Spent'} ${formatMoney(v)} · ${kid.name}`);
-      });
-    };
-    card.querySelector('.add').addEventListener('click',()=>doTx(1));
-    card.querySelector('.spend').addEventListener('click',()=>doTx(-1));
+    const hEl=card.querySelector('.mins-history');
+    if(!hist.length){ hEl.innerHTML='<div class="tx-empty">No days recorded yet.</div>'; }
+    else hist.slice().reverse().forEach(h=>{
+      const r=document.createElement('div');
+      r.className='tx';
+      r.innerHTML=`<span class="tx-amt pos">${h.minutes}m</span>
+        <span class="tx-note">${prettyDay(h.iso)} · ${h.pct}% of tasks</span>`;
+      hEl.appendChild(r);
+    });
 
-    // ---- experience adjustment ----
-    const adjBlock=card.querySelector('.adj-block');
-    const adjSlider=adjBlock.querySelector('.adj-slider');
-    const adjPct=adjBlock.querySelector('.adj-pct');
-    const adjPrev=adjBlock.querySelector('.adj-preview');
-    const adjNote=adjBlock.querySelector('.adj-note');
-    const adjApply=adjBlock.querySelector('.btn-adj');
-    const paintAdj=()=>{
-      const pct=Number(adjSlider.value);
-      adjPct.textContent=(pct>0?'+':'')+pct+'%';
-      adjPct.className='adj-pct '+(pct<0?'neg':pct>0?'pos':'zero');
-      adjApply.disabled=(pct===0);
-      if(!pct){ adjPrev.innerHTML='Slide to take experience away, or to give some back.'; return; }
-      const p=previewAdjustment(kid,pct);
-      const verb=p.amount<0?'loses':'gains';
-      const cls=p.amount<0?'drop':'rise';
-      let rank;
-      if(p.levelAfter<p.levelBefore) rank=`<span class="drop">falls to rank ${p.levelAfter} · ${esc(levelTitle(p.levelAfter))}</span>`;
-      else if(p.levelAfter>p.levelBefore) rank=`<span class="rise">rises to rank ${p.levelAfter} · ${esc(levelTitle(p.levelAfter))}</span>`;
-      else rank=`stays rank ${p.levelAfter} · ${esc(levelTitle(p.levelAfter))}`;
-      adjPrev.innerHTML=`${esc(kid.name)} ${verb} <b class="${cls}">${Math.abs(p.amount)} xp</b> — `+
-        `${kid.xp} → <b>${p.after}</b>, ${rank}.`;
-    };
-    adjBlock.querySelector('.adj-toggle').addEventListener('click',()=>{
-      playClick(); adjBlock.classList.toggle('open'); paintAdj();
-    });
-    adjSlider.addEventListener('input',paintAdj);
-    adjApply.addEventListener('click',()=>{
-      const pct=Number(adjSlider.value);
-      if(!pct) return;
-      playClick();
-      requirePin(()=>{
-        const res=applyAdjustment(kid.id,pct,adjNote.value.trim());
-        if(!res) return;
-        renderHome(); renderDashboard();
-        if(res.levelAfter<res.levelBefore){
-          queueLevelCards([{kid,from:res.levelBefore,to:res.levelAfter,dir:'down'}]);
-        } else if(res.levelAfter>res.levelBefore){
-          queueLevelCards([{kid,from:res.levelBefore,to:res.levelAfter,dir:'up'}]);
-        } else {
-          pct<0?playPenalty():playCheck();
-          showToast(`${kid.name} ${pct<0?'loses':'gains'} ${Math.abs(res.adj.amount)} xp.`);
-        }
-      });
-    });
-    const adjLog=adjBlock.querySelector('.adj-log');
-    recentAdjustments(kid.id,4).forEach(a=>{
-      const row=document.createElement('div');
-      row.className='adj-entry';
-      row.innerHTML=`<span class="adj-entry-amt ${a.amount<0?'neg':'pos'}">${a.amount>0?'+':''}${a.amount} xp</span>
-        <span class="adj-entry-note">${esc(a.note||((a.pct>0?'+':'')+a.pct+'%'))}</span>
-        <button class="tx-del" title="Undo">✕</button>`;
-      row.querySelector('.tx-del').addEventListener('click',()=>{
-        playClick();
-        requirePin(()=>{ removeAdjustment(a.id); renderHome(); renderDashboard(); showToast('Adjustment undone.'); });
-      });
-      adjLog.appendChild(row);
-    });
-    if(recentAdjustments(kid.id,1).length) adjBlock.classList.add('open');
-    paintAdj();
-
-    const list=card.querySelector('.tx-list');
-    const rows=walletTx(kid.id,6);
-    if(!rows.length) list.innerHTML='<div class="tx-empty">No coin recorded yet.</div>';
-    rows.forEach(t=>{
-      const row=document.createElement('div');
-      row.className='tx';
-      row.innerHTML=`<span class="tx-amt ${t.amount>=0?'pos':'neg'}">${t.amount>=0?'+':'−'}${formatMoney(Math.abs(t.amount))}</span>
-        <span class="tx-note">${esc(t.note)}</span>
-        <button class="tx-del" title="Undo">✕</button>`;
-      row.querySelector('.tx-del').addEventListener('click',()=>{
-        playClick();
-        requirePin(()=>{ removeTx(t.id); saveState(); renderDashboard(); showToast('Transaction removed.'); });
-      });
-      list.appendChild(row);
-    });
+    card.appendChild(buildGradeControls(iso, kid, col, false));
   });
+}
+
+/* The last n calendar days, oldest first, today included. */
+function lastDays(n){
+  const out=[];
+  for(let i=n-1;i>=0;i--){
+    const d=new Date();
+    d.setDate(d.getDate()-i);
+    out.push(todayISO(d));
+  }
+  return out;
 }
 
 let swapLogExpanded=false;
@@ -3779,40 +3417,12 @@ function renderSwapLog(){
   if(more) more.addEventListener('click',()=>{ playClick(); swapLogExpanded=!swapLogExpanded; renderSwapLog(); });
 }
 
-function renderPayoutPanel(){
-  const el=document.getElementById('dashPayout');
-  const due=duePayouts().filter(d=>d.lines.length);
-  if(!due.length){ el.innerHTML=''; return; }
-  el.innerHTML='';
-  due.forEach(d=>{
-    const box=document.createElement('div');
-    box.className='payout-card';
-    box.innerHTML=`
-      <div class="payout-title">Allowance due · ${weekLabel(d.key)}</div>
-      <div class="payout-lines">${d.lines.map(l=>
-        `<div class="payout-line"><span>${l.kid.avatar} ${esc(l.kid.name)} · rank ${l.lvl} at week's end</span><span>${formatMoney(l.amount)}</span></div>`
-      ).join('')}</div>
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-        <button class="btn-pay">Pay ${formatMoney(d.total)}</button>
-        <span class="settings-hint" style="margin:0">Paid at the rank each member held when the week closed.</span>
-      </div>`;
-    box.querySelector('.btn-pay').addEventListener('click',()=>{
-      playClick();
-      requirePin(()=>{
-        const paid=payWeek(d.key);
-        playCoin(); setTimeout(playCoin,140); renderDashboard();
-        showToast(`Allowance paid · ${formatMoney(paid)}`);
-      });
-    });
-    el.appendChild(box);
-  });
-}
-
-/* Past days that were never graded still get sliders here, since their
-   task lists are gone but the point snapshot survives. */
+/* A day that slipped past its cutoff without anyone opening the app.
+   The task snapshot survives, so it stays fully adjustable. */
 function renderPendingPanel(){
   const el=document.getElementById('dashPending');
-  const pend=gradableDays().filter(iso=>iso!==todayISO()&&!(getDay(iso)||{}).committed);
+  if(!el) return;
+  const pend=pendingDays().filter(iso=>iso!==todayISO());
   el.innerHTML='';
   pend.forEach(iso=>{
     const kids=state.kids.filter(k=>(getDay(iso)||{kids:{}}).kids[k.id]);
@@ -3820,7 +3430,7 @@ function renderPendingPanel(){
     const box=document.createElement('div');
     box.className='pending-card';
     box.innerHTML=`<div class="pending-head">${prettyDay(iso)} was never sealed</div>
-      <div class="settings-hint" style="margin-top:0">No experience has been awarded for this day.</div>`;
+      <div class="settings-hint" style="margin-top:0">Seal it to lock the minutes in.</div>`;
     kids.forEach(kid=>{
       const col=kidColor(state.kids.indexOf(kid));
       const row=document.createElement('div');
@@ -3833,45 +3443,13 @@ function renderPendingPanel(){
     btn.className='btn-commit';
     btn.style.cssText='margin-top:18px;font-size:1.1rem;padding:12px 28px';
     btn.textContent='Seal '+prettyDay(iso).toLowerCase();
-    btn.addEventListener('click',()=>commitDayUI(iso,kids,()=>{ clearDraft(iso); renderDashboard(); }));
+    btn.addEventListener('click',()=>commitDayUI(iso,kids,()=>renderDashboard()));
     box.appendChild(btn);
     el.appendChild(box);
   });
 }
 
-/* ── LEVEL CHANGE CARDS ───────────────────────────────────────── */
-let levelQueue=[];
-function queueLevelCards(items){
-  levelQueue=items.slice();
-  if(levelQueue.length) showNextLevelCard();
-}
-function showNextLevelCard(){
-  const ov=document.getElementById('levelup-overlay');
-  const card=document.getElementById('luCard');
-  if(!levelQueue.length){ ov.classList.remove('open'); return; }
-  const item=levelQueue.shift();
-  const up=item.dir==='up';
-  const r=rewardsAt(item.to);
-  const scr=r.screens;
-  card.className='lu-card'+(up?'':' down');
-  card.innerHTML=`
-    <div class="lu-kicker">${up?'Rank Attained':'Rank Lost'}</div>
-    <div class="lu-avatar">${item.kid.avatar}</div>
-    <div class="lu-name">${esc(item.kid.name)}</div>
-    <div class="lu-title">${esc(r.title)}</div>
-    <div class="lu-lvl">Rank ${item.from} → Rank ${item.to}</div>
-    <div class="lu-reward">
-      <div class="lu-reward-label">${up?'Reward unlocked':'Now holding'}</div>
-      <div class="lu-reward-text">${esc(r.note)}</div>
-      <div class="lu-reward-sub">📺 ${scr.tv} min · 🎮 ${scr.xbox} min · 💻 ${scr.pc} min${r.allowance>0?' · 💰 '+formatMoney(r.allowance)+'/week':''}</div>
-    </div>
-    <button class="btn-lu" id="luNextBtn">${levelQueue.length?'Next →':'Continue'}</button>`;
-  ov.classList.add('open');
-  if(up){ playFanfare(); spawnConfetti(160); } else { playRankLost(); }
-  document.getElementById('luNextBtn').addEventListener('click',()=>{ playClick(); showNextLevelCard(); });
-}
-
-/* ── REWARDS / LADDER SCREEN ──────────────────────────────────── */
+/* ── SCREEN TIME SCREEN ───────────────────────────────────────── */
 let rewardsKidId=null;
 function openRewardsScreen(){
   const act=getActiveKids();
@@ -3881,100 +3459,63 @@ function openRewardsScreen(){
 }
 
 function renderRewards(){
-  renderGroupPanel(document.getElementById('rewardsGroup'), true);
-
   const tabs=document.getElementById('rewardsKidTabs');
+  const body=document.getElementById('rewardsContent');
+  const grp=document.getElementById('rewardsGroup');
+  if(grp) grp.innerHTML='';
+  const iso=todayISO();
+
+  document.getElementById('rewardsSubtitle').textContent=
+    `${fmtMinutes(dailyMinutes())} on offer each day · sealed at ${String(sealHour()).padStart(2,'0')}:00`;
+
   tabs.innerHTML='';
   state.kids.forEach((kid,i)=>{
-    const col=kidColor(i);
     const b=document.createElement('button');
     b.className='kid-tab'+(kid.id===rewardsKidId?' active':'');
-    if(kid.id===rewardsKidId){ b.style.background=col; b.style.borderColor=col; }
-    b.innerHTML=`<span style="font-size:1.05rem">${kid.avatar}</span> ${esc(kid.name)} <span style="opacity:.7">L${levelFromXp(kid.xp)}</span>`;
+    b.style.setProperty('--tab',kidColor(i));
+    b.innerHTML=`${kid.avatar} ${esc(kid.name)}`;
     b.addEventListener('click',()=>{ playClick(); rewardsKidId=kid.id; renderRewards(); });
     tabs.appendChild(b);
   });
 
   const kid=state.kids.find(k=>k.id===rewardsKidId);
-  const box=document.getElementById('rewardsContent');
-  if(!kid){ box.innerHTML=''; document.getElementById('rewardsSubtitle').textContent=''; return; }
+  body.innerHTML='';
+  if(!kid) return;
+  const col=kidColor(state.kids.indexOf(kid));
+  const today=minutesFor(iso,kid);
 
-  const idx=state.kids.indexOf(kid), col=kidColor(idx);
-  const lvl=levelFromXp(kid.xp), r=rewardsAt(lvl);
-  const pct=levelProgressPct(kid.xp), toNext=xpToNextLevel(kid.xp);
-  const nextR=nextRewardFor(kid.xp);
-  document.getElementById('rewardsSubtitle').textContent=`${kid.name} · ${kid.xp} experience earned`;
+  const head=document.createElement('div');
+  head.className='payout-card';
+  head.innerHTML=`
+    <div class="payout-title">${kid.avatar} ${esc(kid.name)} · today</div>
+    <div class="mins-headline" style="color:${col}">${fmtMinutes(today.minutes)}</div>
+    <div class="gc-summary">${today.doneCount} of ${today.count} tasks · ${today.donePct}% complete</div>`;
+  body.appendChild(head);
 
-  let html=`
-    <div class="hero-card" style="border-left-color:${col}">
-      <div class="hero-top">
-        <span class="hero-avatar">${kid.avatar}</span>
-        <div style="flex:1;min-width:180px">
-          <div class="hero-title" style="color:${col}">${esc(r.title)}</div>
-          <div class="hero-sub">Rank ${lvl} · ${kid.xp} experience${lvl<MAX_LEVEL?` · ${toNext} more to ${esc(levelTitle(lvl+1))}`:' · the highest rank'}</div>
-          <div class="xp-bar"><div class="xp-fill" style="width:${pct}%;background:${col}"></div></div>
-        </div>
-      </div>
-      <div class="hero-perks">
-        <div class="perk"><div class="perk-val">${r.screens.tv}<span style="font-size:.8rem"> min</span></div><div class="perk-label">📺 TV</div></div>
-        <div class="perk"><div class="perk-val">${r.screens.xbox}<span style="font-size:.8rem"> min</span></div><div class="perk-label">🎮 Xbox</div></div>
-        <div class="perk"><div class="perk-val">${r.screens.pc}<span style="font-size:.8rem"> min</span></div><div class="perk-label">💻 PC</div></div>
-        <div class="perk"><div class="perk-val" style="color:var(--moss)">${r.allowance>0?formatMoney(r.allowance):'—'}</div><div class="perk-label">Each week</div></div>
-      </div>
-      ${nextR?`<div class="settings-hint" style="margin-top:16px">At rank ${lvl+1} you become <b>${esc(nextR.title)}</b> — ${esc(nextR.note)}</div>`:''}
-    </div>
-    <p class="section-label">The Ranks</p>
-    <div class="ladder">`;
-
-  state.settings.rewards.forEach(rw=>{
-    const cls=rw.lvl===lvl?'current':(rw.lvl<lvl?'unlocked':'locked');
-    const need=xpForLevel(rw.lvl);
-    html+=`
-      <div class="rung ${cls}">
-        <div class="rung-lvl">${rw.lvl}</div>
-        <div class="rung-body">
-          <div class="rung-title" style="${rw.lvl<=lvl?`color:${col}`:''}">${esc(rw.title)}</div>
-          <div class="rung-note">${esc(rw.note)} · 📺${rw.screens.tv} 🎮${rw.screens.xbox} 💻${rw.screens.pc}</div>
-        </div>
-        <div class="rung-right">
-          ${rw.allowance>0?`<div class="rung-money">${formatMoney(rw.allowance)}</div>`:''}
-          <div>${rw.lvl<=lvl?'earned':need+' xp'}</div>
-        </div>
-      </div>`;
-  });
-  html+='</div>';
-  box.innerHTML=html;
-}
-
-/* Shared group panel — used on both home and rewards screens. */
-function renderGroupPanel(el, full){
-  if(!el) return;
-  const act=getActiveKids();
-  if(!act.length){ el.innerHTML=''; return; }
-  const tier=groupTier();
-  const next=nextGroupReward();
-  const chips=state.settings.groupRewards.map(g=>
-    `<span class="gb-chip${tier>=g.lvl?' on':''}">${g.icon} ${esc(g.name)}${tier>=g.lvl?'':' · L'+g.lvl}</span>`).join('');
-
-  let nextLine='<div class="gb-next">Every party reward is won. The hall is yours.</div>';
-  if(next){
-    const need=xpForLevel(next.lvl);
-    const behind=act.filter(k=>k.xp<need).sort((a,b)=>a.xp-b.xp);
-    if(behind.length){
-      const names=behind.map(k=>`<b>${esc(k.name)}</b> (${Math.max(0,need-k.xp)} XP)`).join(', ');
-      nextLine=`<div class="gb-next">${next.icon} <b>${esc(next.name)}</b> opens when every member reaches rank ${next.lvl}.<br>Still climbing: ${names}. The party moves together.</div>`;
-    }
-  }
-  el.innerHTML=`
-    <div class="group-banner">
-      <div class="gb-top">
-        <div class="gb-title">Party Standing</div>
-        <div class="gb-tier">Rank ${tier}</div>
-      </div>
-      <div class="gb-rewards">${chips}</div>
-      ${nextLine}
-      ${full&&next?`<div class="settings-hint">${esc(next.detail)}</div>`:''}
+  const rows=lastDays(14).map(d=>({iso:d,m:minutesFor(d,kid)})).filter(r=>r.m.count>0);
+  const list=document.createElement('div');
+  list.className='swap-log-card';
+  if(!rows.length) list.innerHTML='<div class="tx-empty">Nothing recorded yet.</div>';
+  else list.innerHTML=rows.reverse().map(r=>{
+    const sealed=(getDay(r.iso)||{}).committed;
+    return `<div class="tx">
+      <span class="tx-amt pos">${r.m.minutes}m</span>
+      <span class="tx-note">${prettyDay(r.iso)} · ${r.m.doneCount}/${r.m.count} tasks · ${r.m.donePct}%${sealed?'':' · unsealed'}</span>
     </div>`;
+  }).join('');
+  body.appendChild(list);
+
+  const detail=document.createElement('div');
+  detail.className='swap-log-card';
+  detail.style.marginTop='16px';
+  detail.innerHTML='<p class="section-label" style="margin-top:0">Today, task by task</p>'+
+    (today.lines.length
+      ? today.lines.map(l=>`<div class="tx">
+          <span class="tx-amt ${l.minutes?'pos':'neg'}">${l.minutes}m</span>
+          <span class="tx-note">${esc(l.name)} · ${l.pts}pt · ${Math.round(l.pct*100)}% of ${l.share}m</span>
+        </div>`).join('')
+      : '<div class="tx-empty">No board drawn today.</div>');
+  body.appendChild(detail);
 }
 
 function esc(s){
@@ -4252,170 +3793,62 @@ function openSettings(){
     });
   });
   renderPinSetup();
-  renderXpSettings();
+  renderMinutesSettings();
   document.getElementById('settings-overlay').classList.add('open');
 }
 
 
-/* ── XP SETTINGS ──────────────────────────────────────────────── */
-function renderXpSettings(){
-  const be=document.getElementById('setBreakEven');
-  const px=document.getElementById('setPerfectXp');
-  const cu=document.getElementById('setCurrency');
+/* ── MINUTES SETTINGS ─────────────────────────────────────────── */
+function renderMinutesSettings(){
+  const dm=document.getElementById('setDailyMinutes');
+  const sh=document.getElementById('setSealHour');
+  const as=document.getElementById('setAutoSeal');
   const ew=document.getElementById('setEditWindow');
-  if(!be) return;
-  be.value=state.settings.breakEvenPct;
-  px.value=state.settings.xpPerfectDay;
-  const ex=document.getElementById('setExtraXp');
-  if(ex) ex.value=state.settings.xpPerExtraPoint;
-  cu.value=state.settings.currency;
-  ew.value=state.settings.editWindowDays;
-  const sel=document.getElementById('setRankAll');
-  if(sel && !sel.options.length){
-    state.settings.rewards.forEach(r=>{
-      const o=document.createElement('option');
-      o.value=r.lvl; o.textContent=`${r.lvl} — ${r.title}`;
-      sel.appendChild(o);
-    });
-    sel.value=3;
-  }
-  updateRankAllHint();
-  updateXpCurveHint();
+  if(!dm) return;
+  dm.value=dailyMinutes();
+  sh.value=sealHour();
+  as.checked=state.settings.autoSeal!==false;
+  ew.value=clampNum(state.settings.editWindowDays,0,365,7);
+  updateMinutesHint();
 }
 
-/* Shows what the current curve actually costs, so the parent can feel the
-   effect of moving break-even before committing to it. */
-function updateXpCurveHint(){
-  const el=document.getElementById('xpCurveHint');
+function updateMinutesHint(){
+  const el=document.getElementById('minutesHint');
   if(!el) return;
-  const need=xpForLevel(8);
-  const rows=[1,0.9,0.8,0.75].map(m=>{
-    const d=xpDeltaFor(m);
-    const days=d>0?Math.ceil(need/d):null;
-    return `${Math.round(m*100)}% → ${d>0?'+':''}${d} XP/day (${days?days+' days':'never'} to Champion)`;
-  });
-  el.innerHTML='Break-even is the slider position worth exactly 0 xp. Below it, experience is lost.<br>'+
-    rows.join('<br>')+
-    `<br><br>Rank 8 (Champion) needs ${need} xp. A one-off task adds ${state.settings.xpPerExtraPoint} xp per point on top, `+
-    `so a 5-point job done well is worth ${5*state.settings.xpPerExtraPoint} xp. Changing any of these rewrites every past day on recalculation.`;
+  const dm=clampNum(Number(document.getElementById('setDailyMinutes').value),1,1440,DAILY_MINUTES);
+  const kid=getActiveKids()[0];
+  const m=kid?minutesFor(todayISO(),kid):null;
+  if(m&&m.count){
+    const pts=m.assignedPts||1;
+    el.textContent=`Today ${kid.name} holds ${m.count} tasks worth ${pts} points, so a point is worth about `+
+      `${Math.round(dm/pts)} min. A 3-point chore pays ${Math.round(dm*3/pts)} min at 100%.`;
+  } else {
+    el.textContent=`Each kid's tasks split ${dm} minutes in proportion to their points. Nothing carries over to the next day.`;
+  }
 }
 
-function updateRankAllHint(){
-  const el=document.getElementById('rankAllHint');
-  const sel=document.getElementById('setRankAll');
-  if(!el||!sel) return;
-  const lvl=Number(sel.value)||0;
-  const target=xpForLevel(lvl);
-  const act=getActiveKids();
-  if(!act.length){ el.textContent='No one is answering the call right now.'; return; }
-  const ups=act.filter(k=>(k.xp||0)<target).length;
-  const downs=act.filter(k=>(k.xp||0)>target).length;
-  const bits=[];
-  if(ups) bits.push(`${ups} would rise`);
-  if(downs) bits.push(`${downs} would drop`);
-  if(!bits.length) bits.push('everyone is already there');
-  el.textContent=`Sets all ${act.length} active members to ${target} xp — the floor of rank ${lvl}. `+
-    bits.join(', ')+'. Recorded as an adjustment each, so it can be undone from the Ledger.';
-}
-
-function bindXpSettings(){
-  const be=document.getElementById('setBreakEven');
-  const px=document.getElementById('setPerfectXp');
-  const cu=document.getElementById('setCurrency');
+function bindMinutesSettings(){
+  const dm=document.getElementById('setDailyMinutes');
+  const sh=document.getElementById('setSealHour');
+  const as=document.getElementById('setAutoSeal');
   const ew=document.getElementById('setEditWindow');
-  if(!be) return;
-
-  be.addEventListener('change',()=>{
-    state.settings.breakEvenPct=clampNum(be.value,1,99,DEFAULT_SETTINGS.breakEvenPct);
-    be.value=state.settings.breakEvenPct;
-    recalcAllXp(); saveState(); updateXpCurveHint(); renderHome();
+  if(!dm) return;
+  dm.addEventListener('input',updateMinutesHint);
+  dm.addEventListener('change',()=>{
+    state.settings.dailyMinutes=clampNum(Number(dm.value),1,1440,DAILY_MINUTES);
+    dm.value=state.settings.dailyMinutes; saveState(); updateMinutesHint(); refreshVisibleScreen();
   });
-  px.addEventListener('change',()=>{
-    state.settings.xpPerfectDay=clampNum(px.value,1,10000,DEFAULT_SETTINGS.xpPerfectDay);
-    px.value=state.settings.xpPerfectDay;
-    recalcAllXp(); saveState(); updateXpCurveHint(); renderHome();
+  sh.addEventListener('change',()=>{
+    state.settings.sealHour=clampNum(Number(sh.value),0,23,SEAL_HOUR);
+    sh.value=state.settings.sealHour; saveState();
   });
-  cu.addEventListener('change',()=>{
-    state.settings.currency=(cu.value||'R$').trim().slice(0,4);
-    cu.value=state.settings.currency; saveState();
-  });
+  as.addEventListener('change',()=>{ state.settings.autoSeal=as.checked; saveState(); });
   ew.addEventListener('change',()=>{
-    state.settings.editWindowDays=clampNum(ew.value,0,365,DEFAULT_SETTINGS.editWindowDays);
+    state.settings.editWindowDays=clampNum(Number(ew.value),0,365,7);
     ew.value=state.settings.editWindowDays; saveState();
   });
-
-  const ex=document.getElementById('setExtraXp');
-  if(ex) ex.addEventListener('change',()=>{
-    state.settings.xpPerExtraPoint=clampNum(ex.value,0,500,DEFAULT_SETTINGS.xpPerExtraPoint);
-    ex.value=state.settings.xpPerExtraPoint;
-    recalcAllXp(); saveState(); updateXpCurveHint(); renderHome();
-  });
-
-  const sel=document.getElementById('setRankAll');
-  if(sel) sel.addEventListener('change',updateRankAllHint);
-  const applyRank=document.getElementById('applyRankAllBtn');
-  if(applyRank) applyRank.addEventListener('click',()=>{
-    playClick();
-    const lvl=Number(document.getElementById('setRankAll').value)||0;
-    const act=getActiveKids();
-    if(!act.length){ showToast('No active members to move.'); return; }
-    const target=xpForLevel(lvl);
-    const willDrop=act.filter(k=>(k.xp||0)>target);
-    const msg=willDrop.length
-      ? `Move all ${act.length} members to rank ${lvl}? ${willDrop.map(k=>k.name).join(', ')} would LOSE experience.`
-      : `Move all ${act.length} members to rank ${lvl} (${target} xp)?`;
-    if(!confirm(msg)) return;
-    const moved=setEveryoneToLevel(lvl);
-    renderHome(); updateRankAllHint(); updateXpCurveHint();
-    if(!moved.length){ showToast(`Everyone is already at rank ${lvl}.`); return; }
-    if(moved.some(m=>m.after>m.before)){ playFanfare(); spawnConfetti(120); }
-    else playSeal();
-    showToast(`${moved.length} member${moved.length>1?'s':''} moved to rank ${lvl} · ${rewardsAt(lvl).title}.`);
-  });
-
-  document.getElementById('recalcXpBtn').addEventListener('click',()=>{
-    playClick(); recalcAllXp(); saveState(); renderHome(); updateXpCurveHint();
-    showToast('XP recalculated from the full history.');
-  });
-  document.getElementById('resetXpBtn').addEventListener('click',()=>{
-    playClick();
-    if(!confirm('Wipe all XP and graded days? Every kid returns to Level 0. This cannot be undone.')) return;
-    state.dayLog=[];
-    state.adjustments=[];
-    state.swapLog=[];
-    state.kids.forEach(k=>{ k.xp=0; });
-    saveState(); renderHome(); updateXpCurveHint();
-    showToast('All XP reset. Everyone starts at Wanderer.');
-  });
 }
-bindXpSettings();
 
-document.getElementById('newDayBtn').addEventListener('click',()=>{
-  playClick();
-  requirePin(()=>{
-    const day=getDay(todayISO());
-    if(day && !day.committed && Object.keys(day.kids).length &&
-       !confirm("Today hasn't been graded yet — no XP was awarded. Start a new day anyway?")) return;
-    document.getElementById('allDoneOverlay').classList.remove('show');
-    questEditing=false; gradeDrafts={};
-    state.roll=null; state.assignments=null; state.today=null; state.rollId=null; state.rolledAt=0;
-    saveState();renderHome();showScreen('home');
-  });
-});
-document.getElementById('allDoneGradeBtn').addEventListener('click',()=>{
-  playClick();
-  document.getElementById('allDoneOverlay').classList.remove('show');
-  renderQuest();
-  const bar=document.getElementById('questCommit');
-  if(bar) bar.scrollIntoView({behavior:'smooth',block:'end'});
-});
-document.getElementById('allDoneBackBtn').addEventListener('click',()=>{
-  playClick();
-  document.getElementById('allDoneOverlay').classList.remove('show');
-});
-
-
-/* ---- sync status pill + sign-in ---- */
 function syncStatus(){
   if(!sb)                       return {cls:'off',  label:'Local only', detail:'The sync library did not load. Everything still works on this device.'};
   if(!syncUser)                 return {cls:'off',  label:'Not synced',  detail:'Sign in once on this device to share with your other devices.'};
@@ -4471,7 +3904,7 @@ function stateForStorage(){
     today:state.today, fewerHistory:state.fewerHistory, dishRotation:state.dishRotation,
     rollId:state.rollId, rolledAt:state.rolledAt, roll:state.roll,
     migrations:state.migrations, settings:state.settings, dayLog:state.dayLog,
-    ledger:state.ledger, adjustments:state.adjustments, swapLog:state.swapLog,
+    adjustments:state.adjustments, swapLog:state.swapLog,
     deleted:state.deleted
   };
 }
@@ -4533,13 +3966,24 @@ document.getElementById('syncPassword').addEventListener('keydown',e=>{
 /* INIT */
 loadState();
 touchTodayLog();
+sealDueDays();
+bindMinutesSettings();
 renderHome();
 if(state.assignments&&state.today===new Date().toDateString())renderQuest();
 else showScreen('home');
 (function(){
   const pend=pendingDays().filter(d=>d!==todayISO());
-  if(pend.length) setTimeout(()=>showToast(`${pend.length} day${pend.length>1?'s':''} still need grading.`),900);
+  if(pend.length) setTimeout(()=>showToast(`${pend.length} day${pend.length>1?'s':''} still unsealed.`),900);
 })();
+
+/* The cutoff has to fire without anyone touching the app, and a static page
+   has no cron — so check every minute, and again whenever the tab wakes. */
+setInterval(()=>{
+  if(sealDueDays().length){ showToast('Day sealed.'); refreshVisibleScreen(); }
+}, 60000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && sealDueDays().length) refreshVisibleScreen();
+});
 initSync();
 </script>
 </body>
