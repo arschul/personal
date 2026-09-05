@@ -2329,8 +2329,8 @@ function renderQuest(){
         <span class="kid-card-avatar">${kid.avatar}</span>
         <span class="kid-card-name">${kid.name}</span>
         <div class="kid-card-pts">
-          <div class="pts-current" id="pts-c-${gi}">${done}</div>
-          <div class="pts-target">/ ${total} pts</div>
+          <div class="pts-current" id="mins-${gi}">${minutesFor(todayISO(),kid).minutes}m</div>
+          <div class="pts-target"><span id="pts-c-${gi}">${done}</span>/${total} pts</div>
         </div>
         <button class="btn-sm" style="margin-left:8px;flex-shrink:0" onclick="openSwap(${gi})">🔄</button>
       </div>
@@ -2431,7 +2431,50 @@ Sealed today &nbsp;·&nbsp; ${earned}
 function refreshSuggestion(kid,localIdx){
   const card=document.getElementById(`kid-card-${state.kids.indexOf(kid)}`);
   const panel=card&&card.querySelector('.grade-inline');
-  if(panel&&panel.refreshTotals) panel.refreshTotals();
+  if(!panel) return;
+  // A tick changes every task's share of the day, so an open panel has to
+  // redraw its rows, not just its total.
+  if(panel.dataset.open==='1'&&panel.rebuildRows) panel.rebuildRows();
+  else if(panel.refreshTotals) panel.refreshTotals();
+}
+
+function updateKidProgress(gi,localIdx){
+  const tasks=(state.assignments&&state.assignments[gi])||[];
+  if(!document.getElementById(`pts-c-${gi}`)) return;
+  const done=tasks.filter(t=>t.done).reduce((s,t)=>s+t.pts,0);
+  const total=tasks.reduce((s,t)=>s+t.pts,0);
+  document.getElementById(`pts-c-${gi}`).textContent=done;
+  document.getElementById(`prog-${gi}`).style.width=Math.min(100,total?(done/total)*100:0)+'%';
+
+  // Minutes are the number the kids actually watch, so they move on the tick
+  // itself rather than waiting for a re-render.
+  const kid=state.kids[gi];
+  const mEl=document.getElementById(`mins-${gi}`);
+  if(kid&&mEl) mEl.textContent=minutesFor(todayISO(),kid).minutes+'m';
+
+  const card=document.getElementById(`kid-card-${gi}`);
+  if(!card) return;
+  const was=card.classList.contains('done');
+  const isDone=total>0&&done>=total;
+  card.classList.toggle('done',isDone);
+  if(isDone&&!was)playComplete();
+}
+
+function checkAllDone(){
+  if(getActiveKids().every(kid=>{const gi=state.kids.indexOf(kid);return(state.assignments[gi]||[]).every(t=>t.done);})){
+    playAllDone();spawnConfetti();
+    setTimeout(()=>document.getElementById('allDoneOverlay').classList.add('show'),1200);
+  }
+}
+
+function spawnConfetti(n){
+  const cols=['#f0d071','#c9a227','#d4596c','#5b9ad6','#a678d8','#63ad76','#f7e6bd'];
+  for(let i=0;i<(n||80);i++){
+    const el=document.createElement('div');
+    el.className='confetti-piece';
+    el.style.cssText=`left:${Math.random()*100}vw;top:-20px;background:${cols[Math.floor(Math.random()*cols.length)]};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;animation-delay:${Math.random()*1.5}s;animation-duration:${2+Math.random()*2}s;`;
+    document.body.appendChild(el);setTimeout(()=>el.remove(),4000);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3214,9 +3257,8 @@ function buildGradeControls(iso, kid, col, locked){
     const sum=el.querySelector('.gc-summary');
     if(head) head.textContent=fmtMinutes(m.minutes);
     if(sum)  sum.textContent=`${m.doneCount} of ${m.count} tasks · ${m.donePct}% complete · out of ${fmtMinutes(dailyMinutes())}`;
-    const home=document.getElementById(`kid-card-${state.kids.indexOf(kid)}`);
-    const bar=home&&home.querySelector('.xp-fill');
-    if(bar) bar.style.width=Math.round(m.minutes/dailyMinutes()*100)+'%';
+    const mEl=document.getElementById(`mins-${state.kids.indexOf(kid)}`);
+    if(mEl) mEl.textContent=m.minutes+'m';
   };
 
   const m0=minutesFor(iso,kid);
@@ -3286,6 +3328,7 @@ function buildGradeControls(iso, kid, col, locked){
   });
 
   el.refreshTotals=refreshTotals;
+  el.rebuildRows=()=>{ buildRows(); refreshTotals(); };
   return el;
 }
 
