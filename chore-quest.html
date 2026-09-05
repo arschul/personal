@@ -1104,6 +1104,13 @@
   .quest-grid .kid-card{padding:10px}
   .quest-grid .kid-name{font-size:0.85rem}
 }
+.sync-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:rgba(196,90,74,0.16);border:1px solid rgba(196,90,74,0.5);
+  color:#f0b5a8;border-radius:10px;padding:11px 14px;margin-bottom:16px;
+  font-size:0.84rem;font-weight:700;line-height:1.45}
+.sync-banner-btn{margin-left:auto;background:#c45a4a;color:#fff;border:none;
+  border-radius:7px;padding:7px 15px;font:inherit;font-size:0.8rem;font-weight:800;cursor:pointer}
+.sync-banner-btn:hover{filter:brightness(1.12)}
 </style>
 </head>
 <body>
@@ -2422,46 +2429,9 @@ Sealed today &nbsp;·&nbsp; ${earned}
 /* Re-seed an untouched slider as tasks get ticked, but never override a
    value the parent has already set by hand. */
 function refreshSuggestion(kid,localIdx){
-  // The per-task sliders read live from state, so ticking a box just needs
-  // the minutes headline repainted.
   const card=document.getElementById(`kid-card-${state.kids.indexOf(kid)}`);
   const panel=card&&card.querySelector('.grade-inline');
-  if(!panel||panel.dataset.open==='1') return;
-  const m=minutesFor(todayISO(),kid);
-  const head=panel.querySelector('.mins-headline');
-  const sum=panel.querySelector('.gc-summary');
-  if(head) head.textContent=fmtMinutes(m.minutes);
-  if(sum) sum.textContent=`${m.doneCount} of ${m.count} tasks · ${m.donePct}% complete · out of ${fmtMinutes(dailyMinutes())}`;
-}
-function updateKidProgress(gi,localIdx){
-  const tasks=(state.assignments&&state.assignments[gi])||[];
-  if(!document.getElementById(`pts-c-${gi}`)) return;
-  const done=tasks.filter(t=>t.done).reduce((s,t)=>s+t.pts,0);
-  const total=tasks.reduce((s,t)=>s+t.pts,0);
-  document.getElementById(`pts-c-${gi}`).textContent=done;
-  document.getElementById(`prog-${gi}`).style.width=Math.min(100,(done/total)*100)+'%';
-  const card=document.getElementById(`kid-card-${gi}`);
-  const was=card.classList.contains('done');
-  const isDone=done>=total;
-  card.classList.toggle('done',isDone);
-  if(isDone&&!was)playComplete();
-}
-
-function checkAllDone(){
-  if(getActiveKids().every(kid=>{const gi=state.kids.indexOf(kid);return(state.assignments[gi]||[]).every(t=>t.done);})){
-    playAllDone();spawnConfetti();
-    setTimeout(()=>document.getElementById('allDoneOverlay').classList.add('show'),1200);
-  }
-}
-
-function spawnConfetti(n){
-  const cols=['#f0d071','#c9a227','#d4596c','#5b9ad6','#a678d8','#63ad76','#f7e6bd'];
-  for(let i=0;i<(n||80);i++){
-    const el=document.createElement('div');
-    el.className='confetti-piece';
-    el.style.cssText=`left:${Math.random()*100}vw;top:-20px;background:${cols[Math.floor(Math.random()*cols.length)]};width:${6+Math.random()*8}px;height:${6+Math.random()*8}px;animation-delay:${Math.random()*1.5}s;animation-duration:${2+Math.random()*2}s;`;
-    document.body.appendChild(el);setTimeout(()=>el.remove(),4000);
-  }
+  if(panel&&panel.refreshTotals) panel.refreshTotals();
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3233,27 +3203,39 @@ function submitExtraTask(){
 function buildGradeControls(iso, kid, col, locked){
   const el=document.createElement('div');
   el.className='grade-inline';
-  const paint=()=>{
+  el.dataset.open='0';
+
+  /* Repainting the whole panel on every slider release was what closed it —
+     the rebuilt panel came back collapsed, and collapsed means locked. The
+     panel is now built once and only its numbers are updated in place. */
+  const refreshTotals=()=>{
     const m=minutesFor(iso,kid);
-    const open=el.dataset.open==='1';
-    el.innerHTML=`
-      <div class="gi-label">
-        <span>Screen time earned</span>
-        ${locked?'<span class="gi-locked">Sealed</span>':''}
-      </div>
-      <div class="mins-headline" style="color:${col}">${fmtMinutes(m.minutes)}</div>
-      <div class="gc-summary">${m.doneCount} of ${m.count} tasks · ${m.donePct}% complete · out of ${fmtMinutes(dailyMinutes())}</div>
-      <button class="gc-adjust">${open?'Hide adjustments':'Adjust completion'}</button>
-      <div class="gc-tasks"${open?'':' hidden'}></div>`;
+    const head=el.querySelector('.mins-headline');
+    const sum=el.querySelector('.gc-summary');
+    if(head) head.textContent=fmtMinutes(m.minutes);
+    if(sum)  sum.textContent=`${m.doneCount} of ${m.count} tasks · ${m.donePct}% complete · out of ${fmtMinutes(dailyMinutes())}`;
+    const home=document.getElementById(`kid-card-${state.kids.indexOf(kid)}`);
+    const bar=home&&home.querySelector('.xp-fill');
+    if(bar) bar.style.width=Math.round(m.minutes/dailyMinutes()*100)+'%';
+  };
 
-    el.querySelector('.gc-adjust').addEventListener('click',()=>{
-      playClick();
-      if(open){ el.dataset.open='0'; paint(); return; }
-      requirePin(()=>{ el.dataset.open='1'; paint(); });
-    });
+  const m0=minutesFor(iso,kid);
+  el.innerHTML=`
+    <div class="gi-label">
+      <span>Screen time earned</span>
+      ${locked?'<span class="gi-locked">Sealed</span>':''}
+    </div>
+    <div class="mins-headline" style="color:${col}">${fmtMinutes(m0.minutes)}</div>
+    <div class="gc-summary">${m0.doneCount} of ${m0.count} tasks · ${m0.donePct}% complete · out of ${fmtMinutes(dailyMinutes())}</div>
+    <button class="gc-adjust">Adjust completion</button>
+    <div class="gc-tasks" hidden></div>`;
 
-    if(!open) return;
-    const wrap=el.querySelector('.gc-tasks');
+  const wrap=el.querySelector('.gc-tasks');
+  const btn=el.querySelector('.gc-adjust');
+
+  const buildRows=()=>{
+    wrap.innerHTML='';
+    const m=minutesFor(iso,kid);
     if(!m.lines.length){
       wrap.innerHTML='<div class="tx-empty">No tasks recorded for this day.</div>';
       return;
@@ -3275,22 +3257,35 @@ function buildGradeControls(iso, kid, col, locked){
       const sl=row.querySelector('.gc-slider');
       sl.style.accentColor=col;
       const pctEl=row.querySelector('.gc-pct'), minEl=row.querySelector('.gc-task-min');
-      sl.addEventListener('input',e=>{
-        const v=Number(e.target.value);
+      const apply=v=>{
         pctEl.textContent=v+'%';
         minEl.textContent=Math.round(line.share*v/100)+'m';
-      });
+      };
+      sl.addEventListener('input',e=>apply(Number(e.target.value)));
       sl.addEventListener('change',e=>{
-        setTaskPct(iso,kid.id,line.key,Number(e.target.value)/100);
-        el.dataset.open='1';
-        paint();
-        refreshVisibleScreen();
+        const v=Number(e.target.value);
+        apply(v);
+        // Writing keeps the panel exactly as it is — no rebuild, no re-prompt.
+        touchParentUnlock();
+        setTaskPct(iso,kid.id,line.key,v/100);
+        refreshTotals();
       });
       wrap.appendChild(row);
     });
   };
-  el.dataset.open='0';
-  paint();
+
+  btn.addEventListener('click',()=>{
+    playClick();
+    if(el.dataset.open==='1'){
+      el.dataset.open='0'; wrap.hidden=true; btn.textContent='Adjust completion';
+      return;
+    }
+    requireParent(()=>{
+      el.dataset.open='1'; buildRows(); wrap.hidden=false; btn.textContent='Hide adjustments';
+    });
+  });
+
+  el.refreshTotals=refreshTotals;
   return el;
 }
 
@@ -3301,7 +3296,7 @@ async function commitDayUI(iso, kids, onDone){
   // A phone may be holding a board from breakfast. Pull before sealing so a
   // tick made on the tablet an hour ago is not silently overwritten.
   if(syncUser && syncReady){ await syncNow({quiet:true}); }
-  requirePin(()=>{
+  requireParent(()=>{
     commitDay(iso);
     renderHome();
     if(onDone) onDone();
@@ -3551,6 +3546,19 @@ function hasPin(){ return getStoredPin().length===4; }
 function requirePin(callback){
   if(!hasPin()){ callback(); return; }
   openPinModal('verify', callback);
+}
+
+/* Adjusting a day means moving several sliders in a row. Asking for the PIN
+   on every one of them is the same as not having a panel at all, so one
+   verification opens a window that covers the rest of the sitting. */
+const PARENT_UNLOCK_MS = 10*60*1000;
+let parentUnlockedUntil = 0;
+function parentUnlocked(){ return Date.now() < parentUnlockedUntil; }
+function touchParentUnlock(){ parentUnlockedUntil = Date.now() + PARENT_UNLOCK_MS; }
+function lockParent(){ parentUnlockedUntil = 0; }
+function requireParent(callback){
+  if(parentUnlocked()){ touchParentUnlock(); callback(); return; }
+  requirePin(()=>{ touchParentUnlock(); callback(); });
 }
 
 function openPinModal(mode, callback){
@@ -3871,6 +3879,30 @@ function renderSyncPill(){
   el.className='sync-pill '+s.cls;
   el.innerHTML=`<span class="sync-dot"></span>${s.label}`;
   el.title=s.detail;
+  renderSyncBanner();
+}
+
+/* A device that was never signed in still works perfectly on its own, which
+   is exactly why nobody notices — it just quietly shows a different board
+   from everyone else. Say it on screen rather than in a pill nobody reads. */
+function renderSyncBanner(){
+  document.querySelectorAll('.sync-banner').forEach(b=>b.remove());
+  if(sb && syncUser && !syncError) return;
+  let msg, act=true;
+  if(!sb)            msg='Sync library did not load — this device is on its own.';
+  else if(!syncUser) msg='This device is not connected. It is showing its own board, not the family board.';
+  else               msg='Sync problem: '+syncError;
+  ['home','quest','dash'].forEach(id=>{
+    const scr=document.getElementById(id);
+    if(!scr) return;
+    const host=scr.firstElementChild||scr;
+    const b=document.createElement('div');
+    b.className='sync-banner';
+    b.innerHTML=`<span>${esc(msg)}</span>`+(act?'<button class="sync-banner-btn">Connect</button>':'');
+    const btn=b.querySelector('.sync-banner-btn');
+    if(btn) btn.addEventListener('click',()=>{ playClick(); openSyncPanel(); });
+    host.insertBefore(b, host.firstChild);
+  });
 }
 function openSyncPanel(){
   const s=syncStatus();
@@ -3888,6 +3920,15 @@ function closeSyncPanel(){ document.getElementById('sync-overlay').classList.rem
 /* Re-renders whatever the person is currently looking at, so a change
    arriving from another device appears without them doing anything. */
 function refreshVisibleScreen(){
+  // A pull arriving every 15 seconds must not rip the adjustment panel out
+  // from under a parent who is halfway through moving sliders. While one is
+  // open, only the derived numbers are refreshed.
+  const openPanel=document.querySelector('.grade-inline[data-open="1"]');
+  if(openPanel){
+    document.querySelectorAll('.grade-inline').forEach(el=>{ if(el.refreshTotals) el.refreshTotals(); });
+    renderSyncPill();
+    return;
+  }
   const active=document.querySelector('.screen.active');
   const id=active?active.id:'home';
   renderHome();
@@ -3967,6 +4008,7 @@ document.getElementById('syncPassword').addEventListener('keydown',e=>{
 loadState();
 touchTodayLog();
 sealDueDays();
+setTimeout(renderSyncBanner,0);
 bindMinutesSettings();
 renderHome();
 if(state.assignments&&state.today===new Date().toDateString())renderQuest();
