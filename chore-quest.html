@@ -1954,12 +1954,18 @@ function toggleThumb(iso, kidId){
   return row.thumb;
 }
 
-/* The week the weekend reward is settled on: Monday through Sunday,
-   containing the given day. */
+/* The reward week is settled on Friday night, so it runs Saturday through
+   Friday: a thumbs up earned on Saturday counts toward the payout at the
+   end of that same week, not the one before it. */
 function weekStart(iso){
   const d=isoToDate(iso||todayISO());
-  const dow=(d.getDay()+6)%7;          // Monday = 0
+  const dow=(d.getDay()+1)%7;          // Saturday = 0
   d.setDate(d.getDate()-dow);
+  return todayISO(d);
+}
+function weekEnd(iso){
+  const d=isoToDate(weekStart(iso));
+  d.setDate(d.getDate()+6);
   return todayISO(d);
 }
 function thumbsThisWeek(kidId, iso){
@@ -3586,7 +3592,7 @@ function renderRewards(){
     <div class="payout-title">${kid.avatar} ${esc(kid.name)} · today</div>
     <div class="mins-headline" style="color:${col}">${fmtMinutes(today.minutes)}</div>
     <div class="gc-summary">${today.doneCount} of ${today.count} tasks · ${today.donePct}% complete</div>
-    <div class="thumb-tally">👍 ${thumbs} this week<span class="thumb-week">week of ${prettyDay(weekStart())}</span></div>`;
+    <div class="thumb-tally">👍 ${thumbs} this week<span class="thumb-week">${prettyDay(weekStart())} → ${prettyDay(weekEnd())}</span></div>`;
   body.appendChild(head);
 
   const rows=lastDays(14).map(d=>({iso:d,m:minutesFor(d,kid)})).filter(r=>r.m.count>0);
