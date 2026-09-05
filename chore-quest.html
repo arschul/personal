@@ -1111,6 +1111,15 @@
 .sync-banner-btn{margin-left:auto;background:#c45a4a;color:#fff;border:none;
   border-radius:7px;padding:7px 15px;font:inherit;font-size:0.8rem;font-weight:800;cursor:pointer}
 .sync-banner-btn:hover{filter:brightness(1.12)}
+.thumb-btn{background:none;border:none;cursor:pointer;padding:0 2px;margin-left:6px;
+  font-size:1.05rem;line-height:1;flex-shrink:0;
+  filter:grayscale(1);opacity:0.35;transform:scale(0.92);
+  transition:filter .18s,opacity .18s,transform .18s}
+.thumb-btn:hover{opacity:0.6;transform:scale(1)}
+.thumb-btn.on{filter:none;opacity:1;transform:scale(1.08)}
+.thumb-tally{margin-top:10px;font-size:0.82rem;font-weight:800;opacity:0.9;
+  display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.thumb-week{font-size:0.72rem;font-weight:600;opacity:0.6}
 </style>
 </head>
 <body>
@@ -1929,6 +1938,38 @@ function minutesFor(iso, kid){
   };
 }
 
+/* A thumbs up is a parent's mark on a kid's day — one per kid per day,
+   toggleable, kept in the same day row as everything else so it merges
+   across devices and travels with the day rather than in its own store. */
+function hasThumb(iso, kidId){
+  const row=(getDay(iso)||{kids:{}}).kids[kidId];
+  return !!(row&&row.thumb);
+}
+function toggleThumb(iso, kidId){
+  const day=getOrCreateDay(iso);
+  const row=day.kids[kidId]||(day.kids[kidId]={});
+  row.thumb=!row.thumb;
+  row.thumbAt=Date.now();
+  saveState();
+  return row.thumb;
+}
+
+/* The week the weekend reward is settled on: Monday through Sunday,
+   containing the given day. */
+function weekStart(iso){
+  const d=isoToDate(iso||todayISO());
+  const dow=(d.getDay()+6)%7;          // Monday = 0
+  d.setDate(d.getDate()-dow);
+  return todayISO(d);
+}
+function thumbsThisWeek(kidId, iso){
+  const start=weekStart(iso);
+  return state.dayLog.filter(d=>{
+    const off=daysBetween(start,d.date);
+    return off>=0 && off<7 && d.kids[kidId] && d.kids[kidId].thumb;
+  }).length;
+}
+
 function fmtMinutes(m){
   m=Math.max(0,Math.round(m));
   if(m<60) return m+' min';
@@ -2328,6 +2369,8 @@ function renderQuest(){
       <div class="kid-card-header">
         <span class="kid-card-avatar">${kid.avatar}</span>
         <span class="kid-card-name">${kid.name}</span>
+        <button class="thumb-btn${hasThumb(todayISO(),kid.id)?' on':''}" id="thumb-${gi}"
+                title="Thumbs up for the week" aria-label="Thumbs up">👍</button>
         <div class="kid-card-pts">
           <div class="pts-current" id="mins-${gi}">${minutesFor(todayISO(),kid).minutes}m</div>
           <div class="pts-target"><span id="pts-c-${gi}">${done}</span>/${total} pts</div>
@@ -2339,6 +2382,19 @@ function renderQuest(){
       <div class="done-banner">Sealed</div>
     `;
     grid.appendChild(card);
+    const thumbBtn=card.querySelector('.thumb-btn');
+    if(thumbBtn) thumbBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      playClick();
+      // Gated, because the board sits on a machine the kids use. One PIN
+      // covers the whole unlock window, so a round of them is one entry.
+      requireParent(()=>{
+        const on=toggleThumb(todayISO(),kid.id);
+        thumbBtn.classList.toggle('on',on);
+        const n=thumbsThisWeek(kid.id);
+        showToast(`${kid.name}: ${n} thumbs up this week`);
+      });
+    });
     const byRoom={};
     tasks.forEach(t=>{if(!byRoom[t.room])byRoom[t.room]=[];byRoom[t.room].push(t);});
     // one-offs always sit at the bottom of the card
@@ -3393,6 +3449,7 @@ function renderDashboard(){
         <div class="dc-stat"><div class="dc-stat-v">${avg}</div><div class="dc-stat-l">7-day avg</div></div>
         <div class="dc-stat"><div class="dc-stat-v">${swapsFor(kid.id).filter(s=>s.outcome==='accepted').length}</div><div class="dc-stat-l">Trades</div></div>
       </div>
+      <div class="thumb-tally">👍 ${thumbsThisWeek(kid.id)} this week</div>
       <div class="mins-history"></div>`;
     grid.appendChild(card);
 
@@ -3402,7 +3459,7 @@ function renderDashboard(){
       const r=document.createElement('div');
       r.className='tx';
       r.innerHTML=`<span class="tx-amt pos">${h.minutes}m</span>
-        <span class="tx-note">${prettyDay(h.iso)} · ${h.pct}% of tasks</span>`;
+        <span class="tx-note">${prettyDay(h.iso)} · ${h.pct}% of tasks${hasThumb(h.iso,kid.id)?' · 👍':''}</span>`;
       hEl.appendChild(r);
     });
 
@@ -3524,10 +3581,12 @@ function renderRewards(){
 
   const head=document.createElement('div');
   head.className='payout-card';
+  const thumbs=thumbsThisWeek(kid.id);
   head.innerHTML=`
     <div class="payout-title">${kid.avatar} ${esc(kid.name)} · today</div>
     <div class="mins-headline" style="color:${col}">${fmtMinutes(today.minutes)}</div>
-    <div class="gc-summary">${today.doneCount} of ${today.count} tasks · ${today.donePct}% complete</div>`;
+    <div class="gc-summary">${today.doneCount} of ${today.count} tasks · ${today.donePct}% complete</div>
+    <div class="thumb-tally">👍 ${thumbs} this week<span class="thumb-week">week of ${prettyDay(weekStart())}</span></div>`;
   body.appendChild(head);
 
   const rows=lastDays(14).map(d=>({iso:d,m:minutesFor(d,kid)})).filter(r=>r.m.count>0);
