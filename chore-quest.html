@@ -2868,8 +2868,21 @@ function ensureSweepCorridorTask(){
   }
 }
 
+/* Today's rows carry the gear being worn, so the day keeps the right
+   screen time once it is in the past. */
+function syncTodayGear(){
+  const day=getDay(todayISO());
+  if(!day||!day.kids||!state.heroes) return;
+  state.kids.forEach(k=>{
+    const row=day.kids[k.id]; if(!row) return;
+    const g=gearBonus(heroEquip(k)).screen;
+    if(row.gearScreen!==g){ row.gearScreen=g; row.gearAt=Date.now(); }
+  });
+}
+
 function saveState(){
   normalizeIds();
+  syncTodayGear();
   // The board is derived from the roll and the roster. If either changed —
   // a kid added or removed on another device — it has to be rebuilt, or the
   // view maps chores onto the wrong people.
@@ -2986,8 +2999,10 @@ function minutesFor(iso, kid){
   const level=levelAt(kid, iso);
   const levelRaw=level*MIN_PER_LEVEL;
   const sealed=(getDay(iso)||{}).committed;
-  const gearRaw=(sealed && row && row.gearScreen!==undefined) ? row.gearScreen
-        : (iso===todayISO() ? gearBonus(heroEquip(kid)).screen : (row&&row.gearScreen)||0);
+  // Today counts whatever is worn right now, sealed or not: gold is paid at
+  // the seal, so gear bought with it has to count for the evening it is used.
+  // Once the day is over it keeps the gear it ended with.
+  const gearRaw = iso===todayISO() ? gearBonus(heroEquip(kid)).screen : ((row&&row.gearScreen)||0);
   const total=Math.round((levelRaw+gearRaw)*donePct/100);
   const minutes=Math.min(total, Math.round(levelRaw*donePct/100));
   return {...base, minutes, bonus: total-minutes, total, level, levelRaw, gearRaw};
@@ -3119,7 +3134,7 @@ function commitDay(iso){
     row.tasks=row.tasks||[];
     row.pct=row.pct||{};
     if(isToday) Object.assign(row, dayPtsForKid(kid));
-    if((isToday && !day.committed) || row.gearScreen===undefined) row.gearScreen=gearBonus(heroEquip(kid)).screen;
+    if(isToday || row.gearScreen===undefined){ row.gearScreen=gearBonus(heroEquip(kid)).screen; row.gearAt=Date.now(); }
   });
   if(!day.committed || !day.sealedAt){ day.committed=true; day.sealedAt=Date.now(); day.stateAt=day.sealedAt; }
   saveState();
@@ -3732,7 +3747,10 @@ function mergeKidRow(a, b){
   out.adjustedAt=Math.max(a.adjustedAt||0,b.adjustedAt||0)||undefined;
   const th=(a.thumbAt||0)>=(b.thumbAt||0)?a:b;
   out.thumb=!!th.thumb; out.thumbAt=th.thumbAt||0;
-  if(a.gearScreen!==undefined || b.gearScreen!==undefined) out.gearScreen = tWin.gearScreen!==undefined ? tWin.gearScreen : (a.gearScreen!==undefined ? a.gearScreen : b.gearScreen);
+  if(a.gearScreen!==undefined || b.gearScreen!==undefined){
+    const g = b.gearScreen===undefined ? a : a.gearScreen===undefined ? b : ((a.gearAt||0) >= (b.gearAt||0) ? a : b);
+    out.gearScreen=g.gearScreen; out.gearAt=g.gearAt||0;
+  }
   return out;
 }
 function mergeDay(a, b){
