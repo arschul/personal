@@ -3008,14 +3008,15 @@ function setTaskPct(iso, kidId, key, pct){
   const day=getOrCreateDay(iso);
   const row=day.kids[kidId]||(day.kids[kidId]={});
   row.pct=row.pct||{};
+  row.pctAt=row.pctAt||{};
   row.pct[key]=Math.min(1,Math.max(0,Number(pct)));
-  row.adjustedAt=Date.now();
+  row.pctAt[key]=row.adjustedAt=Date.now();
   saveState();
 }
 function clearTaskPct(iso, kidId, key){
   const day=getDay(iso);
   const row=day&&day.kids[kidId];
-  if(row&&row.pct){ delete row.pct[key]; row.adjustedAt=Date.now(); saveState(); }
+  if(row&&row.pct){ delete row.pct[key]; row.pctAt=row.pctAt||{}; row.pctAt[key]=row.adjustedAt=Date.now(); saveState(); }
 }
 function isAdjusted(iso, kidId, key){
   const row=(getDay(iso)||{kids:{}}).kids[kidId];
@@ -3047,14 +3048,13 @@ function commitDay(iso){
     const snap=isToday?taskSnapshotFor(kid):null;
     if(!prev && !(snap&&snap.length)) return;
     const row=day.kids[kid.id]=prev||{};
-    if(snap&&snap.length) row.tasks=snap;
+    if(snap&&snap.length){ row.tasks=snap; row.tasksAt=Date.now(); }
     row.tasks=row.tasks||[];
     row.pct=row.pct||{};
     if(isToday) Object.assign(row, dayPtsForKid(kid));
     if(isToday || row.gearScreen===undefined) row.gearScreen=gearBonus(heroEquip(kid)).screen;
   });
-  day.committed=true;
-  day.sealedAt=Date.now();
+  if(!day.committed || !day.sealedAt){ day.committed=true; day.sealedAt=Date.now(); day.stateAt=day.sealedAt; }
   saveState();
   return day;
 }
@@ -3064,6 +3064,7 @@ function unsealDay(iso){
   if(!day) return;
   day.committed=false;
   day.sealedAt=0;
+  day.stateAt=Date.now();
   saveState();
 }
 
@@ -3638,17 +3639,54 @@ function mergeById(mine, theirs, deletedIds){
   return [...out.values()];
 }
 
+/* Days merge field by field, never as whole rows. A device that re-seals its
+   own stale copy of a day used to win outright and wipe the real one: the
+   task list, the marks and the thumbs all went with it. Now the task list
+   only ever moves to a longer-lived copy, every mark keeps its own time, and
+   being sealed can only be undone by an explicit unseal. */
+function mergeKidRow(a, b){
+  if(!a) return b; if(!b) return a;
+  const aT=(a.tasks||[]).length, bT=(b.tasks||[]).length;
+  // whichever copy holds the task list wins it; if both do, the newer snapshot
+  const tWin = !bT ? a : !aT ? b : ((a.tasksAt||0) >= (b.tasksAt||0) ? a : b);
+  const out = {...(tWin===a?b:a), ...tWin};
+  out.tasks = tWin.tasks || [];
+  // marks, one by one, newest first; a row's adjustedAt stands in for older marks without a time
+  const pct={}, pctAt={};
+  const keys=new Set([...Object.keys(a.pct||{}),...Object.keys(b.pct||{}),...Object.keys(a.pctAt||{}),...Object.keys(b.pctAt||{})]);
+  keys.forEach(k=>{
+    const ta=(a.pctAt&&a.pctAt[k])||((a.pct&&k in a.pct)?(a.adjustedAt||0):-1);
+    const tb=(b.pctAt&&b.pctAt[k])||((b.pct&&k in b.pct)?(b.adjustedAt||0):-1);
+    const w = ta>=tb ? a : b, wt=Math.max(ta,tb);
+    if(w.pct && k in w.pct) pct[k]=w.pct[k];
+    if(wt>0) pctAt[k]=wt;
+  });
+  out.pct=pct; out.pctAt=pctAt;
+  out.adjustedAt=Math.max(a.adjustedAt||0,b.adjustedAt||0)||undefined;
+  const th=(a.thumbAt||0)>=(b.thumbAt||0)?a:b;
+  out.thumb=!!th.thumb; out.thumbAt=th.thumbAt||0;
+  if(a.gearScreen!==undefined || b.gearScreen!==undefined) out.gearScreen = tWin.gearScreen!==undefined ? tWin.gearScreen : (a.gearScreen!==undefined ? a.gearScreen : b.gearScreen);
+  return out;
+}
+function mergeDay(a, b){
+  if(!a) return b; if(!b) return a;
+  const kids={};
+  new Set([...Object.keys(a.kids||{}),...Object.keys(b.kids||{})]).forEach(id=>{ kids[id]=mergeKidRow((a.kids||{})[id],(b.kids||{})[id]); });
+  // sealed state: the newest explicit seal/unseal wins; otherwise sealed beats unsealed
+  const sa=a.stateAt||a.sealedAt||0, sb2=b.stateAt||b.sealedAt||0;
+  let committed, sealedAt;
+  if(a.committed && b.committed){ committed=true; sealedAt=Math.min(a.sealedAt||Infinity,b.sealedAt||Infinity); if(!isFinite(sealedAt)) sealedAt=0; }
+  else if(a.committed!==b.committed){
+    const s=a.committed?a:b, u=a.committed?b:a;
+    if((u.stateAt||0) > (s.stateAt||s.sealedAt||0)){ committed=false; sealedAt=0; }   // unsealed after the seal
+    else { committed=true; sealedAt=s.sealedAt||0; }
+  } else { committed=false; sealedAt=0; }
+  return {...a, ...b, date:a.date, kids, committed, sealedAt, stateAt:Math.max(sa,sb2)||undefined};
+}
 function mergeDayLog(mine, theirs){
   const byDate = new Map();
-  (theirs||[]).forEach(d => byDate.set(d.date, d));
-  (mine||[]).forEach(d => {
-    const other = byDate.get(d.date);
-    if(!other){ byDate.set(d.date, d); return; }
-    // A sealed day beats an unsealed one; two sealed days, latest seal wins.
-    if(d.committed && !other.committed)      byDate.set(d.date, d);
-    else if(!d.committed && other.committed) byDate.set(d.date, other);
-    else byDate.set(d.date, (d.sealedAt||0) >= (other.sealedAt||0) ? d : other);
-  });
+  (theirs||[]).forEach(d => { if(d && d.date) byDate.set(d.date, mergeDay(byDate.get(d.date), d)); });
+  (mine||[]).forEach(d => { if(d && d.date) byDate.set(d.date, mergeDay(byDate.get(d.date), d)); });
   return [...byDate.values()].sort((a,b)=> a.date<b.date?-1:a.date>b.date?1:0);
 }
 
@@ -3888,7 +3926,7 @@ function touchTodayLog(){
     const prev=day.kids[kid.id]||{};
     day.kids[kid.id]={...prev, ...live,
       // The snapshot is what keeps a day adjustable after the next draw.
-      tasks: taskSnapshotFor(kid),
+      tasks: taskSnapshotFor(kid), tasksAt: Date.now(),
       pct: prev.pct||{}};
   });
 }
@@ -4446,8 +4484,10 @@ async function initSync(){
   renderSyncPill();
   if(!sb) return;
   const restored=await syncRestoreSession();
-  if(!restored){ renderSyncPill(); return; }
+  if(!restored){ syncSettled=true; if(sealDueDays().length) refreshVisibleScreen(); renderSyncPill(); return; }
   await syncNow({});
+  syncSettled=true;
+  if(sealDueDays().length){ refreshVisibleScreen(); checkLevelUps(); }
   startRealtime();
   // Sealing from a phone must not act on a stale board, so pull whenever
   // the app comes back to the foreground.
@@ -4501,7 +4541,10 @@ fxInit();
 bindUI();
 loadState();
 touchTodayLog();
-sealDueDays();
+// A signed-in device seals only after it has pulled, so it never seals a
+// stale copy of the day. initSync seals once the pull is in (or fails).
+let syncSettled = !sb;      // true once this device has pulled (or knows it can't)
+if(!sb) sealDueDays();
 setTimeout(renderSyncBanner,0);
 bindMinutesSettings();
 renderHome();
@@ -4516,10 +4559,10 @@ else showScreen('home');
    has no cron — so check every minute, and again whenever the tab wakes. */
 setInterval(()=>{
   applySceneTime();
-  if(sealDueDays().length){ showToast('Day sealed. Gold and XP paid out.'); refreshVisibleScreen(); checkLevelUps(); }
+  if(syncSettled && sealDueDays().length){ showToast('Day sealed. Gold and XP paid out.'); refreshVisibleScreen(); checkLevelUps(); }
 }, 60000);
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible' && sealDueDays().length) refreshVisibleScreen();
+  if(syncSettled && document.visibilityState==='visible' && sealDueDays().length) refreshVisibleScreen();
 });
 initSync();
 
