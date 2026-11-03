@@ -211,7 +211,12 @@
   .m-done svg path{ fill:none; stroke:#eaffd8; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; }
   .m-half svg circle{ fill:#e0962f; stroke:#7a4a0e; stroke-width:3; }
   .m-half svg text{ font:900 20px var(--ui); fill:#fff6d6; }
-  .slip.assumed .m-done{ opacity:.45; filter:saturate(.5); }
+  .m-tick svg rect{ fill:rgba(255,255,255,.55); stroke:#8a6a3a; stroke-width:3; }
+  .m-tick svg path{ fill:none; stroke:#fff; stroke-width:4.5; stroke-linecap:round; stroke-linejoin:round; }
+  .m-tick.on svg rect{ fill:#3f8a4c; stroke:#1f4c27; }
+  .slip.st-ticked{ background:radial-gradient(140% 120% at 10% 0%, #f1f8df, #dfeec2 45%, #c9e0a0); }
+  .slip.st-ticked .slip-name{ opacity:.8; }
+  .cg-open{ background:transparent; box-shadow:inset 0 0 0 2px #8a6a3a; }
   .m-not{ right:4px; font-family:var(--display); font-weight:900; font-size:.95rem; line-height:.9; color:#b0281e; text-align:center; width:44px;
           border:3px double #b0281e; border-radius:6px; padding:3px 2px; transform:translateY(-50%) rotate(-10deg); background:rgba(255,240,230,.4); }
   .slip.st-not{ filter:drop-shadow(0 4px 3px rgba(0,0,0,.45)) saturate(.5) brightness(.85); }
@@ -724,8 +729,8 @@
       </div>
       <div class="settings-section">
         <div class="settings-section-title">Screen time</div>
-        <div class="num-row">
-          <label for="setDailyMinutes">Screen minutes per kid per day (before gear)</label>
+        <div class="num-row" hidden>
+          <label for="setDailyMinutes">Screen minutes per kid per day (old days only)</label>
           <input class="input-sm" type="number" id="setDailyMinutes" min="1" max="1440" step="5">
         </div>
         <div class="settings-row">
@@ -1733,7 +1738,11 @@ function renderQuest(){
   $('questDate').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
   const day = getDay(iso);
   const sealed = !!(day && day.committed);
-  $('questState').textContent = sealed ? 'Sealed. Parents can still change a mark.' : `Every contract counts as done unless a parent marks it. The day seals at ${String(sealHour()).padStart(2,'0')}:00.`;
+  $('questState').textContent = !ticking(iso) && !sealed
+    ? `Today every quest counts as done unless a parent marks it. Ticking starts tomorrow.`
+    : sealed
+      ? 'Sealed. Unticked quests count as not done. Parents: tap a quest to mark it Done, Half done or Not done.'
+      : `Tick quests off as you finish them. At ${String(sealHour()).padStart(2,'0')}:00 the day seals and a parent checks the work.`;
   const grid = $('questGrid');
   grid.innerHTML = '';
   getActiveKids().forEach(kid => {
@@ -1783,23 +1792,59 @@ function renderQuest(){
   renderQuestCommit();
 }
 
+/* Before the seal a slip is the kid's own checkbox. After it, it carries the
+   parent's verdict, and only a parent can change it. */
+function isSealed(iso){ return !!(getDay(iso) || {}).committed; }
+function ticking(iso){ return !isSealed(iso) && onOrAfter(iso, ticksSince()); }
 function slipFor(iso, kid, task, gi){
   const key = tickKey(task, kid.id);
-  const row = (getDay(iso) || { kids:{} }).kids[kid.id];
-  const explicit = !!(row && row.pct && row.pct[key] !== undefined);
-  const pct = pctForTask(row, { key, done:task.done }, iso);
-  const st = statusOfPct(pct);
   const s = document.createElement('button');
-  s.className = `slip st-${st}${explicit ? '' : ' assumed'}${task.extra ? ' extra' : ''}`;
   s.dataset.key = key;
-  s.innerHTML = `<span class="pin"></span><span class="slip-name">${esc(task.name)}</span><span class="slip-pts">${pips(task.pts)}</span>${sealMark(st)}` +
-    (task.extra ? '<span class="slip-kill" title="Remove one-off">×</span>' : '');
+  const paint = () => {
+    const extra = task.extra ? ' extra' : '', habit = s.classList.contains('habit') ? ' habit' : '';
+    let st, mark;
+    if(ticking(iso)){
+      st = task.done ? 'ticked' : 'open';
+      mark = tickBox(task.done);
+    } else {
+      const row = (getDay(iso) || { kids:{} }).kids[kid.id];
+      st = statusOfPct(pctForTask(row, { key, done:task.done }, iso));
+      mark = sealMark(st);
+    }
+    s.className = `slip st-${st}${extra}${habit}`;
+    s.innerHTML = `<span class="pin"></span><span class="slip-name">${esc(task.name)}</span><span class="slip-pts">${pips(task.pts)}</span>${mark}` +
+      (task.extra ? '<span class="slip-kill" title="Remove one-off">×</span>' : '');
+    return st;
+  };
+  let st = paint();
+  s.repaint = () => { st = paint(); };
   s.addEventListener('click', e => {
     if(e.target.classList.contains('slip-kill')){ e.stopPropagation(); playClick(); requirePin(() => removeExtraTask(gi, task._id)); return; }
+    if(ticking(iso)){
+      // the kid's own tick: no PIN, instant
+      const next = !task.done;
+      setTick(gi, task, next);
+      task.done = next;
+      touchTodayLog(); saveState();
+      s.repaint();
+      const mk = s.querySelector('.mark'); if(mk && !reduced) mk.classList.add('slam');
+      renderEarnStrip(kid, gi);
+      if(next){
+        playDone();
+        const r = s.getBoundingClientRect();
+        emit(12, r.right - 30, r.top + r.height/2, { colors:['#9be39f','#ffe08a','#fff'], speed:4.5 });
+      } else playUncheck();
+      if(document.querySelector('#chron.active')) renderChronicle();
+      return;
+    }
     playClick();
     requireParent(() => openStatusPicker(s, st, next => applyStatus(iso, kid, key, next, s, gi)));
   });
   return s;
+}
+function tickBox(on){
+  return on ? '<span class="mark m-tick on" title="Ticked"><svg viewBox="0 0 40 40"><rect x="5" y="5" width="30" height="30" rx="7"/><path d="M12 20.5l5.5 5.5L28.5 14"/></svg></span>'
+            : '<span class="mark m-tick" title="Not ticked yet"><svg viewBox="0 0 40 40"><rect x="5" y="5" width="30" height="30" rx="7"/></svg></span>';
 }
 function sealMark(st){
   if(st === 'done') return '<span class="mark m-done" title="Done"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16"/><path d="M12 20.5l5.5 5.5L28.5 14"/></svg></span>';
@@ -1813,7 +1858,7 @@ function renderEarnStrip(kid, gi){
   const iso = todayISO();
   const m = minutesFor(iso, kid), e = dayEarnings(iso, kid);
   el.innerHTML = `<span class="qe">${ICON.xp}<b>+${e.xp}</b><small>XP</small></span><span class="qe">${ICON.coin}<b>+${e.gold}</b><small>gold</small></span>` +
-    `<span class="qe">${ICON.clock}<b>${fmtMinutes(m.total)}</b><small>${m.bonus ? `+${m.bonus} gear` : 'screen'}</small></span>`;
+    `<span class="qe">${ICON.clock}<b>${fmtMinutes(m.total)}</b><small>screen</small></span>`;
 }
 
 /* One popover, reused. Three big choices; Done is the default. */
@@ -1837,9 +1882,8 @@ function applyStatus(iso, kid, key, st, slipEl, gi){
   setTaskPct(iso, kid.id, key, STATUS_PCT[st]);
   const rect = slipEl && document.body.contains(slipEl) ? slipEl.getBoundingClientRect() : null;
   // redraw the one slip in place so the rest of the board does not jump
-  if(slipEl && document.body.contains(slipEl)){
-    slipEl.className = `slip st-${st}${slipEl.classList.contains('extra') ? ' extra' : ''}${slipEl.classList.contains('habit') ? ' habit' : ''}`;
-    const old = slipEl.querySelector('.mark'); if(old) old.outerHTML = sealMark(st);
+  if(slipEl && document.body.contains(slipEl) && slipEl.repaint){
+    slipEl.repaint();
     const mk = slipEl.querySelector('.mark');
     if(mk && !reduced) mk.classList.add('slam');
   }
@@ -2123,7 +2167,7 @@ function renderHeroes(){
           <div class="sheet-gold">${coinNum(st.gold)}<small>${st.earned.toLocaleString('en-US')} earned · ${st.spent.toLocaleString('en-US')} spent</small></div>
         </div>
         <div class="perks">
-          <div class="perk"><div class="perk-v">${fmtMinutes(m.total)}</div><div class="perk-l">screen time today</div><div class="perk-s">${fmtMinutes(m.minutes)} from quests${bon.screen ? ` + ${m.bonus} of ${bon.screen} min gear bonus` : ''}</div></div>
+          <div class="perk"><div class="perk-v">${fmtMinutes(m.total)}</div><div class="perk-l">screen time today</div><div class="perk-s">${fmtMinutes(m.levelRaw + m.gearRaw)} a day at 100%: ${m.levelRaw} min from level ${m.level} + ${m.gearRaw} min from gear${m.count ? ` · ${m.donePct}% done today` : ' · no quests drawn today'}</div></div>
           <div class="perk"><div class="perk-v">${fmtMoney(wk.due)}</div><div class="perk-l">allowance this week</div><div class="perk-s">${bon.money ? `${fmtMoney(bon.money)} from gear × ${wk.avgPct}% of quests done` : 'Buy helms, shoulders, gloves or belts to earn it'}</div></div>
           <div class="perk"><div class="perk-v">${thumbsThisWeek(kid.id)}</div><div class="perk-l">thumbs up this week</div><div class="perk-s">${prettyDay(weekStart())} to ${prettyDay(weekEnd())}</div></div>
         </div>
@@ -2274,11 +2318,12 @@ function renderChronicle(){
           <div class="ckid-earn">${onOrAfter(iso, v5Since()) ? `+${e.xp} XP · +${e.gold} gold · ` : ''}${fmtMinutes(m.total)}${hasThumb(iso, kid.id) ? ' · thumbs up' : ''}</div>`;
         const ul = document.createElement('div');
         ul.className = 'clines';
+        const live = ticking(iso);
         m.lines.forEach(l => {
-          const st = statusOfPct(l.pct);
+          const st = live ? (l.pct > 0 ? 'done' : 'open') : statusOfPct(l.pct);
           const b = document.createElement('button');
           b.className = 'cline st-' + st;
-          b.disabled = !editable;
+          b.disabled = !editable || live;
           b.innerHTML = `<i class="cg cg-${st}"></i><span>${esc(l.name)}</span><small>${l.pts}pt</small>`;
           b.addEventListener('click', () => {
             playClick();
@@ -2496,6 +2541,9 @@ function loadState(){
       // The hero rules start on a fresh day, never halfway through one that
       // was already graded the old way.
       if(!state.migrations.v5Since){ state.migrations.v5Since=v5StartDay(); migrated=true; }
+      // Kids tick their own quests again from this day on; until then every
+      // contract counted as done unless a parent marked it.
+      if(!state.migrations.ticksSince){ state.migrations.ticksSince=v5StartDay(); migrated=true; }
       if(normalizeIds()) migrated=true;
       // The chore list is the one thing a bad merge could still duplicate,
       // and a duplicated chore list produces a legitimately duplicated draw.
@@ -2520,6 +2568,7 @@ function loadState(){
   state.heroes={};
   state.purchases=[];
   state.migrations.v5Since=todayISO();
+  state.migrations.ticksSince=todayISO();
   normalizeIds();
 }
 
@@ -2900,41 +2949,58 @@ function pctForTask(row, t, iso){
   if(stored!==undefined && stored!==null) return Math.min(1,Math.max(0,Number(stored)));
   // Done is the default; a parent marks Half done or Not done. Days graded
   // under the old tick-it-yourself rules keep their old reading.
-  if(iso && onOrAfter(iso, v5Since())) return 1;
+  // Between the hero update and the return of ticking, Done was the default.
+  if(iso && onOrAfter(iso, v5Since()) && !onOrAfter(iso, ticksSince())) return 1;
   return t.done?1:0;
 }
 
 /* The whole reward model. Returns per-task lines plus the day's totals. */
-function minutesFor(iso, kid){
+/* A day's task lines with their marks. Pure: no levels, no gear. */
+function linesFor(iso, kid){
   const row=dayRowFor(iso,kid);
   const tasks=(row&&row.tasks)||[];
-  const share=shareMinutes(tasks);
-  const lines=tasks.map((t,i)=>{
-    const pct=pctForTask(row,t,iso);
-    return {...t, pct, share:share[i], minutes:Math.round(share[i]*pct)};
-  });
-  const allPts=lines.reduce((s,l)=>s+l.pts,0);
-  const wPts=lines.reduce((s,l)=>s+l.pts*l.pct,0);
-  const minutes=Math.min(dailyMinutes(), lines.reduce((s,l)=>s+l.minutes,0));
+  return { row, lines: tasks.map(t=>({...t, pct:pctForTask(row,t,iso)})) };
+}
+
+/* Screen time, hero rules: every level grants 1.5 min a day and gear adds
+   the rest, so level 1 with no gear is 1.5 min and level 20 in full
+   Starforged is 30 + 90 = 2h. The whole allowance is scaled by how much of
+   the day's quests got done. The level is the one the kid walked into the
+   day with; a sealed day keeps the gear it was sealed with.
+   Days before the hero update keep the old 2h-pot model they were paid on. */
+const MIN_PER_LEVEL = 1.5;
+function minutesFor(iso, kid){
+  const { row, lines } = linesFor(iso, kid);
+  const allPts=lines.reduce((s,l)=>s+(l.pts||0),0);
+  const wPts=lines.reduce((s,l)=>s+(l.pts||0)*l.pct,0);
   const donePct=allPts?Math.round((wPts/allPts)*100):0;
-  // Gear adds minutes in proportion to the work done. A sealed day keeps
-  // the gear it was sealed with; today follows whatever is worn now.
-  let gearRaw=0;
-  if(lines.length && onOrAfter(iso, v5Since())){
-    const sealed=(getDay(iso)||{}).committed;
-    gearRaw=(sealed && row && row.gearScreen!==undefined) ? row.gearScreen
-          : (iso===todayISO() ? gearBonus(heroEquip(kid)).screen : (row&&row.gearScreen)||0);
+  const base={ lines, donePct,
+    doneCount: lines.filter(l=>l.pct>0).length, count: lines.length,
+    assignedPts: allPts, completedPts: Math.round(wPts*10)/10 };
+  if(!onOrAfter(iso, v5Since())){
+    const share=shareMinutes(lines);
+    lines.forEach((l,i)=>{ l.share=share[i]; l.minutes=Math.round(share[i]*l.pct); });
+    const minutes=Math.min(dailyMinutes(), lines.reduce((s,l)=>s+l.minutes,0));
+    return {...base, minutes, bonus:0, total:minutes, level:0, levelRaw:0, gearRaw:0};
   }
-  const bonus=scaledScreenBonus(gearRaw, donePct);
-  return {
-    lines,
-    minutes, bonus, total: minutes+bonus,
-    donePct,
-    doneCount: lines.filter(l=>l.pct>0).length,
-    count: lines.length,
-    assignedPts: allPts,
-    completedPts: Math.round(wPts*10)/10,
-  };
+  const level=levelAt(kid, iso);
+  const levelRaw=level*MIN_PER_LEVEL;
+  const sealed=(getDay(iso)||{}).committed;
+  const gearRaw=(sealed && row && row.gearScreen!==undefined) ? row.gearScreen
+        : (iso===todayISO() ? gearBonus(heroEquip(kid)).screen : (row&&row.gearScreen)||0);
+  const total=Math.round((levelRaw+gearRaw)*donePct/100);
+  const minutes=Math.min(total, Math.round(levelRaw*donePct/100));
+  return {...base, minutes, bonus: total-minutes, total, level, levelRaw, gearRaw};
+}
+
+/* The level a kid walked into `iso` with: XP from sealed days before it. */
+function levelAt(kid, iso){
+  let xp=0;
+  state.dayLog.forEach(d=>{
+    if(!d.committed || d.date>=iso || !d.kids || !d.kids[kid.id]) return;
+    xp+=dayEarnings(d.date,kid).xp;
+  });
+  return levelForXP(xp);
 }
 
 /* A thumbs up is a parent's mark on a kid's day — one per kid per day,
@@ -2984,9 +3050,10 @@ function fmtMinutes(m){
 
 /* ---- hero economy glue: everything is derived from sealed days ---- */
 function v5Since(){ return (state.migrations&&state.migrations.v5Since)||null; }
+function ticksSince(){ return (state.migrations&&state.migrations.ticksSince)||v5Since(); }
 function dayEarnings(iso, kid){
   if(!onOrAfter(iso, v5Since())) return {xp:0,gold:0};
-  return earningsFromLines(minutesFor(iso,kid).lines);
+  return earningsFromLines(linesFor(iso,kid).lines);
 }
 function activePurchases(){
   const gone=new Set(state.deleted.purch||[]);
@@ -3052,7 +3119,7 @@ function commitDay(iso){
     row.tasks=row.tasks||[];
     row.pct=row.pct||{};
     if(isToday) Object.assign(row, dayPtsForKid(kid));
-    if(isToday || row.gearScreen===undefined) row.gearScreen=gearBonus(heroEquip(kid)).screen;
+    if((isToday && !day.committed) || row.gearScreen===undefined) row.gearScreen=gearBonus(heroEquip(kid)).screen;
   });
   if(!day.committed || !day.sealedAt){ day.committed=true; day.sealedAt=Date.now(); day.stateAt=day.sealedAt; }
   saveState();
@@ -3701,7 +3768,14 @@ function applyRemote(key, remote, theirsNewer){
         if(Array.isArray(remote.rooms)) state.rooms = remote.rooms;
         if(remote.settings)             state.settings = mergeSettings(remote.settings);
         if(Array.isArray(remote.dishRotation)) state.dishRotation = remote.dishRotation;
-        if(remote.migrations)           state.migrations = remote.migrations;
+        if(remote.migrations){
+          const keep={};
+          ['v5Since','ticksSince'].forEach(k=>{
+            const a=state.migrations&&state.migrations[k], b=remote.migrations[k];
+            if(a||b) keep[k]=(a&&b)?(a<b?a:b):(a||b);
+          });
+          state.migrations = {...remote.migrations, ...keep};
+        }
         if(remote.pin) localStorage.setItem('chorequest_pin', remote.pin);
       }
       break;
@@ -3789,6 +3863,7 @@ async function syncPull(){
   if(changed){
     normalizeIds();
     if(roomsLookCorrupt()) repairRooms();
+    if(!(getDay(todayISO())||{}).committed) touchTodayLog();
     sealDueDays();
     localStorage.setItem('chorequest_v4', JSON.stringify(stateForStorage()));
   }
@@ -4356,7 +4431,8 @@ function renderMinutesSettings(){
 
 function updateMinutesHint(){
   const el=document.getElementById('minutesHint');
-  if(!el) return;
+  if(el) el.textContent='Screen time comes from levels and gear: 1.5 min a day per level, plus whatever the worn gear gives, scaled by how much of the day\'s quests got done. Level 20 in full Starforged gear is 2h a day.';
+  return;
   const dm=clampNum(Number(document.getElementById('setDailyMinutes').value),1,1440,DAILY_MINUTES);
   const kid=getActiveKids()[0];
   const m=kid?minutesFor(todayISO(),kid):null;
