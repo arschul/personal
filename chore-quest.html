@@ -851,8 +851,8 @@
    Everything here is derived from day rows and purchases, so a
    re-graded day can never double-pay and two devices always agree.
    ============================================================ */
-const XP_PER_PT   = 60;   // full effort reaches level 20 in about 25 days
-const GOLD_PER_PT = 20;   // and can buy every item in the shop in about 28
+const XP_PER_PT   = 10;   // a perfect day (~12.5 pts) is ~125 XP: a level every day or two
+const GOLD_PER_PT = 10;   // and ~125 gold: one or two pieces of gear a day
 const MAX_LEVEL   = 20;
 
 /* Status of a single contract. Done is the default. */
@@ -865,10 +865,14 @@ function statusOfPct(p){
   return 'not';
 }
 
-/* Level n starts at 50·(n−1)² XP: level 2 at 50, 5 at 800, 10 at 4,050, 20 at 18,050. */
+/* Level n starts at 140·k + 3·k² XP, k = n−1: level 2 at 143, 4 at 447,
+   8 at 1,127, 12 at 1,903, 16 at 2,775, 20 at 3,743. Nearly linear, so a
+   new level keeps arriving every day or two all the way up, and each gear
+   tier unlocks about when the tier before it has been bought out. */
 function xpForLevel(L){
   L = Math.max(1, Math.min(MAX_LEVEL, Math.floor(L)));
-  return 50 * (L - 1) * (L - 1);
+  const k = L - 1;
+  return 140 * k + 3 * k * k;
 }
 function levelForXP(xp){
   xp = Math.max(0, Number(xp) || 0);
@@ -906,11 +910,11 @@ const SLOTS = [
    `max` is each slot's Starforged value; lower tiers pay a fraction of it. */
 /* One row per tier. Screen perks are minutes per day, money perks R$ per week. */
 const TIERS = [
-  { n:1, key:'leather', name:'Rookie',      level:1,  price:30,  frac:0.2 },
+  { n:1, key:'leather', name:'Rookie',      level:1,  price:60,  frac:0.2 },
   { n:2, key:'bronze',  name:'Bronze',      level:4,  price:70,  frac:0.4 },
-  { n:3, key:'steel',   name:'Steel',       level:8,  price:130, frac:0.6 },
-  { n:4, key:'gold',    name:'Gold',        level:12, price:220, frac:0.8 },
-  { n:5, key:'star',    name:'Starforged',  level:16, price:360, frac:1   },
+  { n:3, key:'steel',   name:'Steel',       level:8,  price:85,  frac:0.6 },
+  { n:4, key:'gold',    name:'Gold',        level:12, price:100, frac:0.8 },
+  { n:5, key:'star',    name:'Starforged',  level:16, price:115, frac:1   },
 ];
 const ITEM_NAMES = {
   helm:      ['Leather Cap','Bronze Helm','Steel Greathelm','Golden Winged Helm','Starforged Crown'],
@@ -1076,6 +1080,13 @@ function hairBack(av, helm){
     case 'bob':   return P('M47,50 C43,72 46,88 56,90 L104,90 C114,88 117,72 113,50 Z', h);
     case 'wild':  return P('M46,64 L32,54 L42,44 L32,30 L50,28 L50,12 L66,20 L80,6 L94,20 L110,12 L110,28 L128,30 L118,44 L128,54 L114,64 L120,80 L104,74 L56,74 L40,80 Z', h);
     case 'puff':  return helm ? '' : C(80, 22, 27, h) + C(57, 34, 15, h) + C(103, 34, 15, h);
+    case 'braid': {
+      // the braid hangs down the back, peeking out past the right shoulder
+      let b = '';
+      [[106,56,8],[114,68,7.5],[120,80,7],[124,92,6.5],[126,103,6]].forEach(([x,y,r]) => { b += E(x, y, r, r + 1.5, h); });
+      b += `<rect x="120" y="108" width="12" height="5" rx="2" fill="${av.trim}" stroke="${OL}" stroke-width="2"/>` + L('M123,113 L120,121 M129,113 L132,121', h, 3.2);
+      return b;
+    }
   }
   return '';
 }
@@ -1083,13 +1094,6 @@ const CAP = 'M49,56 C46,30 62,20 80,20 C98,20 114,30 111,56 C104,44 94,40 80,40 
 function hairFront(av, helm){
   const h = av.hair, hd = shade(h, -0.35);
   let s = '';
-  if(av.style === 'braid'){
-    // the braid falls forward over the shoulder, so it is drawn even under a helm
-    let b = '';
-    [[104,70,7.5],[107,82,7],[109,93,6.5],[110,104,6],[110,114,5.2]].forEach(([x,y,r]) => { b += E(x, y, r, r + 1.5, h); });
-    b += `<rect x="104" y="118" width="12" height="5" rx="2" fill="${av.trim}" stroke="${OL}" stroke-width="2"/>` + L('M107,123 L104,131 M113,123 L116,131', h, 3.2);
-    s += b;
-  }
   if(helm) return s;
   switch(av.style){
     case 'messy':
@@ -1337,9 +1341,7 @@ function heroSVG(opts){
   if(!man) base += face(av);
   if(!man) base += hairFront(av, helm);
 
-  // draw order: weapon (under the fist), base body, pants, boots, chest, belt, gloves, shoulders, helm
-  const wpn = has('weapon') ? lay('weapon', drawWeapon(u, gear.weapon)) : '';
-  // the weapon must sit under the hand but over the body, so split the base at the arms
+  // draw order: base body, pants, boots, chest, belt, arms, gloves, shoulders, weapon, gripping fingers, helm
   body.push(`<g class="hl-base"${baseOp}>${base}</g>`);
   const over = [];
   if(has('pants'))     over.push(lay('pants', drawPants(u, gear.pants)));
@@ -1347,15 +1349,21 @@ function heroSVG(opts){
   if(has('chest'))     over.push(lay('chest', drawChest(u, gear.chest)));
   if(has('belt'))      over.push(lay('belt', drawBelt(u, gear.belt)));
   // re-draw arms over the chest piece so the armour reads as worn, not pasted on
-  if(has('chest') || has('weapon')){
+  if(has('chest')){
     const arms = limb(ARM_L_UP, av.tunic, 15) + limb(ARM_L_LO, av.skin, 12);
-    over.push(wpn + `<g${baseOp}>${arms}${C(42, 148, 7.5, av.skin)}${mirror(arms + C(42, 148, 7.5, av.skin))}</g>`);
+    over.push(`<g${baseOp}>${arms}${C(42, 148, 7.5, av.skin)}${mirror(arms + C(42, 148, 7.5, av.skin))}</g>`);
   }
   if(has('gloves'))    over.push(lay('gloves', drawGloves(u, gear.gloves)));
   if(has('shoulders')) over.push(lay('shoulders', drawShoulders(u, gear.shoulders)));
+  // The weapon sits in front of the fist, and the fingers close over its grip,
+  // in the glove's material when one is worn.
+  if(has('weapon')){
+    const gl = gear.gloves && (!only || only === 'gloves' || only === 'weapon') ? gear.gloves : 0;
+    const fingers = `<g transform="rotate(-10 42 148)"${baseOp}><rect x="35" y="142.5" width="14" height="11" rx="5" fill="${gl && !only ? grad(u, gl) : av.skin}" stroke="${OL}" stroke-width="2.2"/>` +
+      `<path d="M35.5,148 L48.5,148" stroke="${OL}" stroke-width="1.2" opacity=".55"/></g>`;
+    over.push(lay('weapon', drawWeapon(u, gear.weapon) + fingers));
+  }
   if(helm)             over.push(lay('helm', drawHelm(u, gear.helm)));
-  // a braid falls in front of the shoulder piece
-  if(!man && av.style === 'braid' && has('shoulders')) over.push(hairFront(av, true));
 
   const vb = opts.viewBox || '0 0 160 220';
   return `<svg class="${opts.cls || 'hero-svg'}" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${defs(u)}${body.join('')}${over.join('')}</svg>`;
