@@ -453,7 +453,7 @@
   .star-toggle{ cursor:pointer; opacity:.3; filter:grayscale(1); } .star-toggle.on{ opacity:1; filter:none; }
   .fairness-row{ display:flex; align-items:center; gap:8px; padding:4px 0; }
   .fairness-dot{ width:12px; height:12px; border-radius:50%; flex:none; }
-  .next-tag{ font-weight:800; color:var(--moss); min-width:36px; }
+  .next-tag{ font-weight:800; color:var(--moss); min-width:64px; }
   .add-row{ display:flex; gap:8px; margin-top:8px; }
   .btn-sm{ border:0; cursor:pointer; border-radius:10px; padding:7px 12px; font-weight:800; background:linear-gradient(180deg,#6a5a8a,#3e3460); color:var(--text); box-shadow:0 3px 0 #1b1630; }
   .btn-sm.primary{ background:linear-gradient(180deg,#ffd86b,#d8962a); color:#3a2408; box-shadow:0 3px 0 #7d5310; }
@@ -719,7 +719,7 @@
         </div>
       </div>
       <div class="settings-section">
-        <div class="settings-section-title">Dishes rotation <span>next up is first. Whoever does the dishes also loads the dishwasher.</span></div>
+        <div class="settings-section-title">Dishes rotation <span>one kid per day, in this order, then repeat. Whoever does the dishes also loads the dishwasher.</span></div>
         <div id="dishRotationSettings"></div>
       </div>
       <div class="settings-section">
@@ -2478,7 +2478,7 @@ const DEFAULT_SETTINGS = {
   editWindowDays: 7,     // how far back a sealed day may be adjusted
 };
 
-let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],migrations:{},settings:{},dayLog:[],adjustments:[],swapLog:[],deleted:{adj:[],purch:[]},rollId:null,rolledAt:0,roll:null,heroes:{},purchases:[]};
+let state={kids:[],rooms:[],assignments:null,today:null,fewerHistory:[],dishRotation:[],dishAnchor:null,migrations:{},settings:{},dayLog:[],adjustments:[],swapLog:[],deleted:{adj:[],purch:[]},rollId:null,rolledAt:0,roll:null,heroes:{},purchases:[]};
 
 function loadState(){
   try{
@@ -2499,6 +2499,7 @@ function loadState(){
       state.rooms=p.rooms||DEFAULT_DATA.rooms.map(r=>({...r,tasks:r.tasks.map(t=>({...t}))}));
       state.fewerHistory=p.fewerHistory||[];
       state.dishRotation=p.dishRotation||['Samuel','Lucca','Pedro','Bianca'];
+      state.dishAnchor=p.dishAnchor||null;
       state.migrations=p.migrations||{};
       let migrated=false;
       const today=new Date().toDateString();
@@ -2559,7 +2560,8 @@ function loadState(){
   state.rooms=DEFAULT_DATA.rooms.map(r=>({...r,tasks:r.tasks.map(t=>({...t}))}));
   state.fewerHistory=[];
   state.dishRotation=['Samuel','Lucca','Pedro','Bianca'];
-  state.migrations={brushTeeth:true,ptsFixed:true,sweepCorridor:true,dishes5:true,rollFix:true};
+  state.dishAnchor={day:todayISO(),name:'Samuel'};
+  state.migrations={dishCycle:true,brushTeeth:true,ptsFixed:true,sweepCorridor:true,dishes5:true,rollFix:true};
   state.settings=mergeSettings(null);
   state.dayLog=[];
   state.adjustments=[];
@@ -2838,9 +2840,34 @@ function setDishPoints(pts){
 }
 
 function syncDishRotation(){
+  // One-time switch to a fixed, date-driven cycle: Samuel, Lucca, Pedro, Bianca.
+  if(!state.migrations.dishCycle){
+    state.dishRotation=['Samuel','Lucca','Pedro','Bianca'];
+    state.dishAnchor={day:todayISO(),name:'Samuel'};
+    state.migrations.dishCycle=true;
+  }
   const names=state.kids.map(k=>k.name);
   state.dishRotation=state.dishRotation.filter(n=>names.includes(n));
   for(const n of names){ if(!state.dishRotation.includes(n)) state.dishRotation.push(n); }
+  if(!state.dishAnchor || !state.dishRotation.includes(state.dishAnchor.name)){
+    state.dishAnchor={day:todayISO(),name:state.dishRotation[0]||null};
+  }
+}
+
+/* The dishes follow the calendar, not the number of draws: redrawing a day
+   never moves the cycle. The order repeats every N days from the anchor. An
+   away kid's day passes to the next kid in order, for that day only. */
+function dayNum(iso){ const [y,m,d]=iso.split('-').map(Number); return Math.round(Date.UTC(y,m-1,d)/864e5); }
+function dishSlot(iso){
+  const order=state.dishRotation, n=order.length;
+  if(!n || !state.dishAnchor) return 0;
+  const start=Math.max(0,order.indexOf(state.dishAnchor.name));
+  return (((start+dayNum(iso)-dayNum(state.dishAnchor.day))%n)+n)%n;
+}
+function dishKidFor(iso, activeNames){
+  const order=state.dishRotation, n=order.length, at=dishSlot(iso);
+  for(let k=0;k<n;k++){ const nm=order[(at+k)%n]; if(!activeNames || activeNames.includes(nm)) return nm; }
+  return null;
 }
 
 function ensureBrushTeethTask(){
@@ -3247,6 +3274,53 @@ function calcPoints(){
 }
 
 /* DISTRIBUTION */
+/* Splits the pool so the kids' totals are as even as the point values allow.
+   Heaviest-first greedy alone can leave a 3-point gap (e.g. 12 vs 15), so each
+   attempt is polished by moving single tasks and trading pairs between kids
+   while that narrows the spread; the most even of many shuffled attempts wins.
+   Score: largest-minus-smallest total first, then sum of squares. */
+function balancePool(tasks, kidIdx, basePts){
+  const K=kidIdx.length, M=tasks.length;
+  if(!K || !M) return [];
+  const base=kidIdx.map(i=>basePts[i]);
+  const score=t=>{ let mx=-Infinity,mn=Infinity,sq=0; for(const v of t){ if(v>mx)mx=v; if(v<mn)mn=v; sq+=v*v; } return [mx-mn,sq]; };
+  const better=(a,b)=>a[0]<b[0]||(a[0]===b[0]&&a[1]<b[1]);
+  const total=base.reduce((a,b)=>a+b,0)+tasks.reduce((a,t)=>a+t.pts,0);
+  const floorSpread=total%K?1:0;
+  let best=null, bestScore=null;
+  for(let attempt=0; attempt<200; attempt++){
+    const order=shuffleArr([...tasks.keys()]).sort((a,b)=>tasks[b].pts-tasks[a].pts);
+    const own=new Array(M), tot=base.slice();
+    for(const j of order){
+      const mn=Math.min(...tot), tied=[]; tot.forEach((v,k)=>{ if(v===mn) tied.push(k); });
+      const k=tied[Math.floor(Math.random()*tied.length)]; own[j]=k; tot[k]+=tasks[j].pts;
+    }
+    for(let improved=true, guard=0; improved && guard<500; guard++){
+      improved=false; let cur=score(tot);
+      for(let j=0;j<M && !improved;j++){
+        const a=own[j], p=tasks[j].pts;
+        for(let b=0;b<K && !improved;b++){
+          if(b===a) continue;
+          tot[a]-=p; tot[b]+=p; const sc=score(tot);
+          if(better(sc,cur)){ own[j]=b; improved=true; break; }
+          tot[a]+=p; tot[b]-=p;
+          for(let i=0;i<M;i++){
+            if(own[i]!==b) continue;
+            const d=p-tasks[i].pts; if(!d) continue;
+            tot[a]-=d; tot[b]+=d; const sc2=score(tot);
+            if(better(sc2,cur)){ own[j]=b; own[i]=a; improved=true; break; }
+            tot[a]+=d; tot[b]-=d;
+          }
+        }
+      }
+    }
+    const sc=score(tot);
+    if(!best || better(sc,bestScore)){ best=own.slice(); bestScore=sc; }
+    if(bestScore[0]<=floorSpread && attempt>=20) break;
+  }
+  return best.map(k=>kidIdx[k]);
+}
+
 function distributeTasks(){
   syncDishRotation();
   const activeKids=getActiveKids();
@@ -3273,41 +3347,23 @@ function distributeTasks(){
   kidIdx.forEach(i=>{ kidPts[i]=assignments[i].reduce((s,t)=>s+t.pts,0); });
 
   if(dishTaskDef){
-    let dishKidName=null;
-    for(const name of state.dishRotation){
-      if(activeKids.find(k=>k.name===name)){ dishKidName=name; break; }
-    }
-    if(dishKidName){
-      const dishGI=state.kids.findIndex(k=>k.name===dishKidName);
-      if(dishGI!==-1){
-        assignments[dishGI].push({...dishTaskDef,_id:uid++});
-        kidPts[dishGI]+=dishTaskDef.pts;
-        partnerDefs.forEach(p=>{ assignments[dishGI].push({...p,_id:uid++}); kidPts[dishGI]+=p.pts; });
-        partnerDefs.length=0;
-      }
-      state.dishRotation=state.dishRotation.filter(nm=>nm!==dishKidName);
-      state.dishRotation.push(dishKidName);
+    const dishKidName=dishKidFor(todayISO(), activeKids.map(k=>k.name));
+    const dishGI=dishKidName ? state.kids.findIndex(k=>k.name===dishKidName) : -1;
+    if(dishGI!==-1 && assignments[dishGI]){
+      assignments[dishGI].push({...dishTaskDef,_id:uid++});
+      kidPts[dishGI]+=dishTaskDef.pts;
+      partnerDefs.forEach(p=>{ assignments[dishGI].push({...p,_id:uid++}); kidPts[dishGI]+=p.pts; });
+      partnerDefs.length=0;
     }
   }
 
   // No dish kid today: the dishwasher goes back in the common pool.
   poolTasks.push(...partnerDefs);
-  function shuffleArr(arr){
-    for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
-    return arr;
-  }
-  // Bucket by whatever point values actually exist, heaviest first. The old
-  // hard-coded 3/2/1 silently dropped any task worth anything else.
-  const tiers=[...new Set(poolTasks.map(t=>t.pts))].sort((a,b)=>b-a);
-  const sortedPool=tiers.flatMap(p=>shuffleArr(poolTasks.filter(t=>t.pts===p)));
-
-  for(const task of sortedPool){
-    const minP=Math.min(...kidIdx.map(i=>kidPts[i]));
-    const tied=kidIdx.filter(i=>kidPts[i]===minP);
-    const pick=tied[Math.floor(Math.random()*tied.length)];
-    assignments[pick].push({...task,_id:uid++});
-    kidPts[pick]+=task.pts;
-  }
+  const owner=balancePool(poolTasks, kidIdx, kidPts);
+  poolTasks.forEach((task,j)=>{
+    assignments[owner[j]].push({...task,_id:uid++});
+    kidPts[owner[j]]+=task.pts;
+  });
 
   const minPts=Math.min(...kidIdx.map(i=>kidPts[i]));
   const fewerGI=kidIdx.filter(i=>kidPts[i]===minPts);
@@ -3699,7 +3755,8 @@ const SYNC_META = 'chorequest_sync';
 function sliceFor(key){
   switch(key){
     case 'cq_config':   return {kids:state.kids, rooms:state.rooms, settings:state.settings,
-                                dishRotation:state.dishRotation, migrations:state.migrations,
+                                dishRotation:state.dishRotation, dishAnchor:state.dishAnchor,
+                                migrations:state.migrations,
                                 pin:getStoredPin()||null};
     case 'cq_today':    return {roll:state.roll, fewerHistory:state.fewerHistory};
     case 'cq_progress': return {dayLog:state.dayLog, adjustments:state.adjustments, adjDeleted:state.deleted.adj};
@@ -3786,6 +3843,7 @@ function applyRemote(key, remote, theirsNewer){
         if(Array.isArray(remote.rooms)) state.rooms = remote.rooms;
         if(remote.settings)             state.settings = mergeSettings(remote.settings);
         if(Array.isArray(remote.dishRotation)) state.dishRotation = remote.dishRotation;
+        if(remote.dishAnchor) state.dishAnchor = remote.dishAnchor;
         if(remote.migrations){
           const keep={};
           ['v5Since','ticksSince'].forEach(k=>{
@@ -4372,15 +4430,18 @@ function openSettings(){
 
   const dr=document.getElementById('dishRotationSettings');
   dr.innerHTML='';
+  const todaySlot=dishSlot(todayISO()), nDish=state.dishRotation.length;
   state.dishRotation.forEach((name,i)=>{
     const ki=state.kids.findIndex(k=>k.name===name);
     const col=kidColor(ki);
+    const ahead=((i-todaySlot)%nDish+nDish)%nDish;
+    const tag=ahead===0?'Today':ahead===1?'Tomorrow':'';
     const row=document.createElement('div');
     row.className='fairness-row';
     row.innerHTML=`
       <div class="fairness-dot" style="background:${col}"></div>
-      <span class="next-tag">${i===0?'Next':''}</span>
-      <span style="flex:1;font-weight:${i===0?900:700};color:${i===0?'var(--moss)':'inherit'}">${name}</span>
+      <span class="next-tag">${tag}</span>
+      <span style="flex:1;font-weight:${ahead===0?900:700};color:${ahead===0?'var(--moss)':'inherit'}">${name}</span>
       <button class="btn-sm" style="padding:2px 6px" onclick="moveDishUp(${i})" ${i===0?'disabled':''}>↑</button>
       <button class="btn-sm" style="padding:2px 6px" onclick="moveDishDown(${i})" ${i===state.dishRotation.length-1?'disabled':''}>↓</button>
     `;
@@ -4566,7 +4627,7 @@ function stateForStorage(){
   return {
     kids:state.kids, rooms:state.rooms, assignments:state.assignments,
     today:state.today, fewerHistory:state.fewerHistory, dishRotation:state.dishRotation,
-    rollId:state.rollId, rolledAt:state.rolledAt, roll:state.roll,
+    dishAnchor:state.dishAnchor, rollId:state.rollId, rolledAt:state.rolledAt, roll:state.roll,
     migrations:state.migrations, settings:state.settings, dayLog:state.dayLog,
     adjustments:state.adjustments, swapLog:state.swapLog,
     deleted:state.deleted, heroes:state.heroes, purchases:state.purchases
