@@ -734,8 +734,8 @@
           <input class="input-sm" type="number" id="setDailyMinutes" min="1" max="1440" step="5">
         </div>
         <div class="settings-row">
-          <label for="setSealHour">Auto-seal hour (0-23)</label>
-          <input class="input-sm" type="number" id="setSealHour" min="0" max="23" step="1">
+          <label for="setSealHour">Auto-seal hour (1-23)</label>
+          <input class="input-sm" type="number" id="setSealHour" min="1" max="23" step="1">
         </div>
         <div class="settings-row">
           <label for="setAutoSeal">Seal the day automatically</label>
@@ -1917,7 +1917,7 @@ async function commitDayUI(iso, kids, onDone){
   playClick();
   if(syncUser && syncReady){ await syncNow({ quiet:true }); }
   requireParent(() => {
-    commitDay(iso);
+    commitDay(iso,'parent');
     if(onDone) onDone();
     playSeal();
     sealCeremony(iso, kids);
@@ -2577,7 +2577,7 @@ function loadState(){
 /* Before the seal hour, today is still fresh; after it, start tomorrow. */
 function v5StartDay(){
   const now=new Date();
-  if(now.getHours()<clampNum(state.settings.sealHour,0,23,SEAL_HOUR)) return todayISO(now);
+  if(now.getHours()<sealHour()) return todayISO(now);
   now.setDate(now.getDate()+1);
   return todayISO(now);
 }
@@ -2614,10 +2614,17 @@ function migrateToMinutes(){
 function mergeSettings(stored){
   const s={...DEFAULT_SETTINGS,...(stored||{})};
   s.dailyMinutes=clampNum(s.dailyMinutes,1,1440,DEFAULT_SETTINGS.dailyMinutes);
-  s.sealHour=clampNum(s.sealHour,0,23,DEFAULT_SETTINGS.sealHour);
+  s.sealHour=validSealHour(s.sealHour,DEFAULT_SETTINGS.sealHour);
   s.autoSeal=s.autoSeal!==false;
   s.editWindowDays=clampNum(s.editWindowDays,0,365,DEFAULT_SETTINGS.editWindowDays);
   return s;
+}
+/* An empty or bad field must never become hour 0: Number('') is 0, and a
+   seal hour of 0 means "past the cutoff" all day, which seals at once. */
+function validSealHour(v,fallback){
+  if(v===''||v===null||v===undefined) return fallback;
+  const n=Math.round(Number(v));
+  return (isFinite(n) && n>=1 && n<=23) ? n : fallback;
 }
 function clampNum(v,lo,hi,fallback){
   const n=Number(v);
@@ -2933,7 +2940,7 @@ function saveState(){
    ============================================================ */
 
 function dailyMinutes(){ return clampNum(state.settings.dailyMinutes, 1, 1440, DAILY_MINUTES); }
-function sealHour(){     return clampNum(state.settings.sealHour, 0, 23, SEAL_HOUR); }
+function sealHour(){     return validSealHour(state.settings.sealHour, SEAL_HOUR); }
 
 function todayISO(d){
   const x=d?new Date(d):new Date();
@@ -3149,7 +3156,7 @@ function dayPtsForKid(kid){
 /* ---- sealing ----
    Sealing freezes the task list and the ticks. It awards nothing by
    itself — minutes are derived — so re-sealing is always safe. */
-function commitDay(iso){
+function commitDay(iso, by){
   const day=getOrCreateDay(iso);
   const isToday=(iso===todayISO());
   state.kids.forEach(kid=>{
@@ -3163,7 +3170,7 @@ function commitDay(iso){
     if(isToday) Object.assign(row, dayPtsForKid(kid));
     if(isToday || row.gearScreen===undefined){ row.gearScreen=gearBonus(heroEquip(kid)).screen; row.gearAt=Date.now(); }
   });
-  if(!day.committed || !day.sealedAt){ day.committed=true; day.sealedAt=Date.now(); day.stateAt=day.sealedAt; }
+  if(!day.committed || !day.sealedAt){ day.committed=true; day.sealedAt=Date.now(); day.stateAt=day.sealedAt; day.sealedBy=by||'parent'; }
   saveState();
   return day;
 }
@@ -3173,6 +3180,7 @@ function unsealDay(iso){
   if(!day) return;
   day.committed=false;
   day.sealedAt=0;
+  delete day.sealedBy;
   day.stateAt=Date.now();
   saveState();
 }
@@ -3198,7 +3206,7 @@ function sealDueDays(){
     if((t&&!t.committed) || (hasBoard&&!t)) due.push(iso);
   }
   const uniq=[...new Set(due)].filter(canEditDay).sort();
-  uniq.forEach(d=>commitDay(d));
+  uniq.forEach(d=>commitDay(d,'auto'));
   return uniq;
 }
 
@@ -3810,7 +3818,21 @@ function mergeKidRow(a, b){
   }
   return out;
 }
+/* A device with a wrong clock or time zone, or a bad seal hour, can auto-seal
+   a day early and push it to everyone ("sealed beats unsealed"). An auto seal
+   stamped before that day's cutoff, or later than this device's clock, is
+   treated as never having happened. Parent seals (PIN) are always kept. */
+function cutoffMs(iso){ const d=isoToDate(iso); d.setHours(sealHour(),0,0,0); return d.getTime(); }
+function prematureAutoSeal(d){
+  if(!d || !d.committed || d.sealedBy!=='auto') return false;
+  const t=d.sealedAt||0;
+  return t < cutoffMs(d.date) || t > Date.now()+5*60000;
+}
+function dropPrematureSeal(d){
+  return prematureAutoSeal(d) ? {...d, committed:false, sealedAt:0, sealedBy:undefined} : d;
+}
 function mergeDay(a, b){
+  a=dropPrematureSeal(a); b=dropPrematureSeal(b);
   if(!a) return b; if(!b) return a;
   const kids={};
   new Set([...Object.keys(a.kids||{}),...Object.keys(b.kids||{})]).forEach(id=>{ kids[id]=mergeKidRow((a.kids||{})[id],(b.kids||{})[id]); });
@@ -3823,7 +3845,8 @@ function mergeDay(a, b){
     if((u.stateAt||0) > (s.stateAt||s.sealedAt||0)){ committed=false; sealedAt=0; }   // unsealed after the seal
     else { committed=true; sealedAt=s.sealedAt||0; }
   } else { committed=false; sealedAt=0; }
-  return {...a, ...b, date:a.date, kids, committed, sealedAt, stateAt:Math.max(sa,sb2)||undefined};
+  const sealer = !committed ? null : (a.committed && (!b.committed || (a.sealedAt||0) <= (b.sealedAt||0))) ? a : b;
+  return {...a, ...b, date:a.date, kids, committed, sealedAt, sealedBy:sealer?sealer.sealedBy:undefined, stateAt:Math.max(sa,sb2)||undefined};
 }
 function mergeDayLog(mine, theirs){
   const byDate = new Map();
@@ -4536,7 +4559,7 @@ function bindMinutesSettings(){
     dm.value=state.settings.dailyMinutes; saveState(); updateMinutesHint(); refreshVisibleScreen();
   });
   sh.addEventListener('change',()=>{
-    state.settings.sealHour=clampNum(Number(sh.value),0,23,SEAL_HOUR);
+    state.settings.sealHour=validSealHour(sh.value.trim(),sealHour());
     sh.value=state.settings.sealHour; saveState();
   });
   as.addEventListener('change',()=>{ state.settings.autoSeal=as.checked; saveState(); });
