@@ -1905,6 +1905,19 @@ function renderQuestCommit(){
   const day = getDay(iso);
   if(day && day.committed){
     bar.innerHTML = `<div class="sealed-note"><span class="wax">${ICON.party}</span>Today is sealed. Gold and XP are paid.</div>`;
+    // Unsealing only sticks before the cutoff; after it the auto-seal would close the day again within a minute.
+    const canUnseal = state.settings.autoSeal === false || new Date().getHours() < sealHour();
+    if(canUnseal){
+      bar.innerHTML += `<button class="btn-sm" id="questUnsealBtn" style="margin-left:12px">Unseal today</button>`;
+      $('questUnsealBtn').addEventListener('click', () => {
+        playClick();
+        requireParent(() => {
+          unsealDay(iso);
+          showToast('Today is open again. Quests can be ticked.');
+          renderQuest();
+        });
+      });
+    }
     return;
   }
   bar.innerHTML = `<button class="act act-gold" id="questCommitBtn">Seal the day and pay out</button>
