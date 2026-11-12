@@ -2794,6 +2794,10 @@ function setTick(gi, task, done){
 }
 
 /* ---- overlay merges. Every one is keyed, so re-running is a no-op. ---- */
+/* A stamp from a device whose clock runs ahead would win every
+   "newest wins" comparison until that time actually arrives, freezing
+   everyone else's changes. Nothing can be newer than now. */
+function stamp(t){ return Math.min(Number(t)||0, Date.now()+60000); }
 function mergeRolls(mine, theirs){
   if(!theirs || !theirs.base) return mine;
   if(!mine   || !mine.base)   return theirs;
@@ -2804,7 +2808,7 @@ function mergeRolls(mine, theirs){
   out.ticks = {...theirs.ticks};
   Object.keys(mine.ticks||{}).forEach(k=>{
     const a = mine.ticks[k], b = out.ticks[k];
-    if(!b || (a.at||0) >= (b.at||0)) out.ticks[k] = a;   // most recent toggle wins
+    if(!b || stamp(a.at) >= stamp(b.at)) out.ticks[k] = a;   // most recent toggle wins
   });
   out.extrasDeleted = [...new Set([...(mine.extrasDeleted||[]), ...(theirs.extrasDeleted||[])])];
   const byId = new Map();
@@ -3018,7 +3022,10 @@ function pctForTask(row, t, iso){
 /* A day's task lines with their marks. Pure: no levels, no gear. */
 function linesFor(iso, kid){
   const row=dayRowFor(iso,kid);
-  const tasks=(row&&row.tasks)||[];
+  // Today, before the seal, the live board is the truth: a snapshot that came
+  // in from another device can lag behind the ticks on this one.
+  const live = iso===todayISO() && !isSealed(iso) && state.assignments && state.today===new Date().toDateString();
+  const tasks=live ? taskSnapshotFor(kid) : ((row&&row.tasks)||[]);
   return { row, lines: tasks.map(t=>({...t, pct:pctForTask(row,t,iso)})) };
 }
 
@@ -3808,15 +3815,15 @@ function mergeKidRow(a, b){
   if(!a) return b; if(!b) return a;
   const aT=(a.tasks||[]).length, bT=(b.tasks||[]).length;
   // whichever copy holds the task list wins it; if both do, the newer snapshot
-  const tWin = !bT ? a : !aT ? b : ((a.tasksAt||0) >= (b.tasksAt||0) ? a : b);
+  const tWin = !bT ? a : !aT ? b : (stamp(a.tasksAt) >= stamp(b.tasksAt) ? a : b);
   const out = {...(tWin===a?b:a), ...tWin};
   out.tasks = tWin.tasks || [];
   // marks, one by one, newest first; a row's adjustedAt stands in for older marks without a time
   const pct={}, pctAt={};
   const keys=new Set([...Object.keys(a.pct||{}),...Object.keys(b.pct||{}),...Object.keys(a.pctAt||{}),...Object.keys(b.pctAt||{})]);
   keys.forEach(k=>{
-    const ta=(a.pctAt&&a.pctAt[k])||((a.pct&&k in a.pct)?(a.adjustedAt||0):-1);
-    const tb=(b.pctAt&&b.pctAt[k])||((b.pct&&k in b.pct)?(b.adjustedAt||0):-1);
+    const ta=stamp((a.pctAt&&a.pctAt[k])||((a.pct&&k in a.pct)?(a.adjustedAt||0):-1));
+    const tb=stamp((b.pctAt&&b.pctAt[k])||((b.pct&&k in b.pct)?(b.adjustedAt||0):-1));
     const w = ta>=tb ? a : b, wt=Math.max(ta,tb);
     if(w.pct && k in w.pct) pct[k]=w.pct[k];
     if(wt>0) pctAt[k]=wt;
@@ -3850,12 +3857,12 @@ function mergeDay(a, b){
   const kids={};
   new Set([...Object.keys(a.kids||{}),...Object.keys(b.kids||{})]).forEach(id=>{ kids[id]=mergeKidRow((a.kids||{})[id],(b.kids||{})[id]); });
   // sealed state: the newest explicit seal/unseal wins; otherwise sealed beats unsealed
-  const sa=a.stateAt||a.sealedAt||0, sb2=b.stateAt||b.sealedAt||0;
+  const sa=stamp(a.stateAt||a.sealedAt), sb2=stamp(b.stateAt||b.sealedAt);
   let committed, sealedAt;
   if(a.committed && b.committed){ committed=true; sealedAt=Math.min(a.sealedAt||Infinity,b.sealedAt||Infinity); if(!isFinite(sealedAt)) sealedAt=0; }
   else if(a.committed!==b.committed){
     const s=a.committed?a:b, u=a.committed?b:a;
-    if((u.stateAt||0) > (s.stateAt||s.sealedAt||0)){ committed=false; sealedAt=0; }   // unsealed after the seal
+    if(stamp(u.stateAt) > stamp(s.stateAt||s.sealedAt)){ committed=false; sealedAt=0; }   // unsealed after the seal
     else { committed=true; sealedAt=s.sealedAt||0; }
   } else { committed=false; sealedAt=0; }
   const sealer = !committed ? null : (a.committed && (!b.committed || (a.sealedAt||0) <= (b.sealedAt||0))) ? a : b;
